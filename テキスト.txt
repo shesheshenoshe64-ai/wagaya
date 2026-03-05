@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#FF8050"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="わが家の手帳"/>
+<title>わが家の手帳</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%}
+body{font-family:'M PLUS Rounded 1c',sans-serif;background:#F4F1EE;color:#1E1E1E;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+input,select,textarea,button{font-family:inherit}
+input:focus,select:focus{outline:2px solid #FF5E8A;outline-offset:1px}
+button{cursor:pointer;border:none;background:none}
+a{color:inherit}
+
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes checkBounce{0%{transform:scale(0);opacity:0}55%{transform:scale(1.35)}100%{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.su{animation:slideUp .22s ease both}
+.fi{animation:fadeIn .18s ease both}
+.spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+
+/* Shell */
+.shell{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:#F4F1EE}
+
+/* Header */
+.hdr{background:linear-gradient(135deg,#FF8050 0%,#FF5E8A 55%,#A855F7 100%);padding:14px 18px 0;flex-shrink:0;box-shadow:0 3px 20px rgba(255,94,138,.28)}
+.hdr-top{display:flex;align-items:center;gap:8px;margin-bottom:13px}
+.hdr-title{color:#fff;font-size:17px;font-weight:800;flex:1;letter-spacing:.3px}
+.hdr-members{display:flex;gap:1px}
+.hdr-members span{font-size:20px}
+.sync-pill{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.18);font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.sync-dot{width:7px;height:7px;border-radius:50%}
+
+/* Tabs */
+.tabs{display:flex;gap:5px;padding-bottom:13px}
+.tab{flex:1;padding:8px 2px;border-radius:11px;font-size:12px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(255,255,255,.14);transition:all .18s;letter-spacing:.1px}
+.tab.on{background:#fff;color:#FF5E8A;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:13px 13px 30px}
+
+/* Cards */
+.card{background:#fff;border-radius:18px;padding:15px;margin-bottom:11px;box-shadow:0 2px 12px rgba(0,0,0,.055)}
+.card-label{font-size:10px;font-weight:800;color:#AAA;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+
+/* Field */
+.field{width:100%;padding:12px 14px;border:2px solid #EBEBEB;border-radius:12px;font-size:15px;background:#FAFAFA;color:#1E1E1E;margin-bottom:10px;transition:border-color .15s}
+.field:focus{border-color:#FF5E8A;background:#fff}
+.field-mono{font-family:monospace;font-size:13px;word-break:break-all}
+
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:800;letter-spacing:.2px;transition:transform .1s,opacity .1s}
+.btn:active{transform:scale(.97);opacity:.9}
+.btn:disabled{opacity:.5;transform:none}
+.btn-grad{background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;box-shadow:0 4px 14px rgba(255,94,138,.32)}
+.btn-purple{background:linear-gradient(135deg,#FF8050,#A855F7);color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.28)}
+.btn-ghost{background:none;border:2px dashed #DDD;color:#AAA}
+.btn-ghost.warn{border-color:#FFB3C6;color:#FF5E8A}
+
+/* Chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:6px 13px;border-radius:20px;border:2px solid #E5E5E5;font-size:12px;font-weight:700;color:#888;background:#fff;transition:all .15s;white-space:nowrap}
+.chip-row{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.m-chip{padding:7px 12px;border-radius:20px;border:2px solid #E5E5E5;font-size:13px;font-weight:600;background:#fff;transition:all .15s}
+.toggle{padding:7px 16px;border-radius:20px;border:2px solid #E5E5E5;font-size:13px;font-weight:700;background:#fff;color:#999;transition:all .15s}
+.toggle.on{border-color:#4CAF50;background:#e8f5e9;color:#4CAF50}
+
+/* Shopping */
+.shop-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid #F2F2F2;transition:opacity .2s}
+.shop-item:last-child{border-bottom:none}
+.shop-item.done{opacity:.38}
+.chk{width:27px;height:27px;border-radius:50%;border:2.5px solid #DDD;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s}
+.chk.on{background:#4CAF50;border-color:#4CAF50;animation:pop .28s ease}
+.chk-icon{color:#fff;font-size:15px;font-weight:900;animation:checkBounce .22s ease}
+.shop-txt{flex:1;font-size:15px;font-weight:500}
+.shop-txt.done{text-decoration:line-through;color:#BBB}
+.shop-who{font-size:11px;font-weight:800;flex-shrink:0}
+.del{color:#DDD;font-size:17px;padding:3px 5px;flex-shrink:0;border-radius:7px;transition:color .12s}
+.del:active{color:#FF5E8A}
+.cat-group{background:#fff;border-radius:18px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.055)}
+.cat-hdr{display:flex;align-items:center;gap:8px;padding:11px 15px 9px;border-bottom:1px solid #F5F5F5}
+.cat-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.cat-name{font-size:14px;font-weight:800;flex:1}
+.cat-cnt{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:800}
+.cat-items{padding:0 15px}
+
+/* Palette */
+.palette{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.pal-dot{width:30px;height:30px;border-radius:50%;border:3px solid transparent;transition:transform .12s;cursor:pointer}
+.pal-dot:active{transform:scale(.82)}
+.pal-dot.on{border-color:#1E1E1E}
+
+/* Calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.cal-arr{width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:19px;font-weight:900;color:#FF5E8A;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+.cal-arr:active{transform:scale(.88)}
+.cal-mo{font-weight:800;font-size:18px}
+.cal-grid{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.055);margin-bottom:12px}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(135deg,#FF8050,#FF5E8A)}
+.cal-dow{text-align:center;padding:7px 0;font-size:11px;font-weight:800;color:rgba(255,255,255,.82)}
+.cal-dow.s{color:#FFD0D0}.cal-dow.sa{color:#C8E6FF}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#F0F0F0}
+.cal-cell{background:#fff;min-height:50px;padding:5px 4px 4px;cursor:pointer;user-select:none}
+.cal-cell:active,.cal-cell.sel{background:#FFF0F8}
+.cal-cell.empty{background:#FAFAFA;cursor:default}
+.cal-num{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-bottom:3px}
+.cal-num.today{background:#FF5E8A;color:#fff;font-weight:800}
+.cal-num.s{color:#E53935}.cal-num.sa{color:#1E88E5}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px}
+.cal-dot{width:5px;height:5px;border-radius:50%}
+.ev-row{display:flex;align-items:flex-start;gap:9px;padding:11px 0;border-bottom:1px solid #F2F2F2}
+.ev-row:last-child{border-bottom:none}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:800}
+.badge-t{background:#FF5E8A18;color:#FF5E8A}.badge-all{background:#4CAF5018;color:#4CAF50}
+
+/* Budget */
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sum-card{background:#fff;border-radius:14px;padding:12px 6px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.055)}
+.b-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F2F2F2}
+.b-row:last-child{border-bottom:none}
+.b-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.bar-row{margin-bottom:9px}
+.bar-lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar-track{background:#F0F0F0;border-radius:4px;height:7px}
+.bar-fill{height:100%;border-radius:4px;transition:width .55s cubic-bezier(.4,0,.2,1)}
+
+/* Common */
+.m-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F2F2F2}
+.m-row:last-child{border-bottom:none}
+.sep{display:flex;align-items:center;gap:8px;margin:12px 0 10px;font-size:10px;font-weight:800;color:#BBB;letter-spacing:.8px;text-transform:uppercase}
+.sep::before,.sep::after{content:’’;flex:1;height:1px;background:#EBEBEB}
+.empty{text-align:center;padding:26px 0 18px;color:#CCC;font-size:14px;line-height:1.9}
+.empty-ico{font-size:36px;display:block;margin-bottom:6px}
+.type-row{display:flex;gap:8px;margin-bottom:10px}
+.type-btn{flex:1;padding:10px;border-radius:12px;border:2px solid #E5E5E5;font-size:13px;font-weight:700;background:#fff;transition:all .15s}
+.type-btn.on{border-color:#FF5E8A;background:#FFF0F5;color:#FF5E8A}
+
+/* Info boxes */
+.box{border-radius:13px;padding:13px 14px;font-size:13px;line-height:1.8;margin-bottom:11px}
+.box strong{display:block;font-size:14px;margin-bottom:4px}
+.box-yellow{background:#FFFDE7;border:1.5px solid #FFD54F;color:#5D4000}
+.box-green{background:#E8F5E9;border:1.5px solid #A5D6A7;color:#1B5E20}
+.box-red{background:#FFEBEE;border:1.5px solid #FFCDD2;color:#B71C1C}
+.box-blue{background:#E3F2FD;border:1.5px solid #90CAF9;color:#0D47A1}
+
+/* Setup screen */
+.setup-bg{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;background:linear-gradient(160deg,#FFF5F8 0%,#F0EFFE 100%);padding:30px 20px 40px;overflow-y:auto}
+.setup-logo{font-size:56px;margin-bottom:10px;line-height:1}
+.setup-title{font-size:24px;font-weight:800;background:linear-gradient(135deg,#FF8050,#FF5E8A,#A855F7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.setup-sub{font-size:14px;color:#888;margin-bottom:24px;text-align:center;line-height:1.6}
+.step-tabs{display:flex;gap:6px;margin-bottom:20px;width:100%}
+.step-tab{flex:1;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s}
+.step-tab.on{border-color:#FF5E8A;background:#FFF0F5;color:#FF5E8A}
+.step-tab.off{border-color:#E5E5E5;background:#fff;color:#AAA}
+.step-num{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#FF5E8A;color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;margin-right:4px}
+.step-content{width:100%}
+.step-card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:12px;width:100%}
+.err-msg{background:#FFEBEE;border:1.5px solid #FFCDD2;border-radius:10px;padding:10px 12px;font-size:13px;color:#B71C1C;margin-bottom:10px;line-height:1.6}
+.instruction-step{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+.instruction-num{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.instruction-text{font-size:13px;line-height:1.7;color:#333;flex:1}
+.instruction-text b{color:#FF5E8A}
+.link-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-top:4px}
+</style>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { useState, useEffect, useRef, useCallback, createElement as h, Fragment } from 'https://esm.sh/react@18';
+import { createRoot } from 'https://esm.sh/react-dom@18/client';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const LS_CFG = 'wagaya_firebase_cfg_v1';
+const DB_PATH = 'wagaya/v1';
+const LIM = { text:100, note:200, amount:9999999, cats:30, items:300, events:500, budget:500, members:8 };
+
+const DEF_MEMBERS = [
+  {id:'m1',name:'パパ',emoji:'👨',color:'#4A90D9'},
+  {id:'m2',name:'ママ',emoji:'👩',color:'#E87CA0'},
+  {id:'m3',name:'子ども1',emoji:'🧒',color:'#F5A623'},
+  {id:'m4',name:'子ども2',emoji:'👦',color:'#5DAE5F'},
+];
+const DEF_CATS = [
+  {id:'sc1',name:'スーパー',color:'#4CAF50'},
+  {id:'sc2',name:'薬局',color:'#2196F3'},
+  {id:'sc3',name:'100均',color:'#FF9800'},
+  {id:'sc4',name:'ベビー用品',color:'#E91E8C'},
+  {id:'sc5',name:'ホームセンター',color:'#795548'},
+  {id:'sc6',name:'コンビニ',color:'#9C27B0'},
+  {id:'sc7',name:'その他',color:'#78909C'},
+];
+const BCATS = ['食費','日用品','交通費','娯楽','医療','教育','その他'];
+const BCLR = {食費:'#FF6B6B',日用品:'#4ECDC4',交通費:'#45B7D1',娯楽:'#7BC67E',医療:'#F0A500',教育:'#CE93D8',その他:'#B0BEC5'};
+const PAL = ['#4CAF50','#2196F3','#FF9800','#E91E8C','#F44336','#795548','#9C27B0','#78909C','#009688','#FF5722','#3F51B5','#00BCD4','#8BC34A','#FFC107','#673AB7','#E91E63','#4A90D9','#F5A623','#5DAE5F','#FF7043'];
+const EMOJIS = ['👨','👩','🧒','👦','👧','🧑','👴','👵','👶','🐣'];
+
+// ── Security ──────────────────────────────────────────────────────────────────
+const clean = (s, max=LIM.text) => String(s??'').slice(0,max).trim();
+const cleanClr = c => /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#78909C';
+const cleanAmt = v => { const n=parseFloat(v); return Number.isFinite(n)&&n>=0&&n<=LIM.amount?n:0 };
+const cleanDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+const cleanTime = t => /^\d{2}:\d{2}$/.test(t) ? t : '';
+const uid = () => crypto.randomUUID();
+const today = () => new Date().toISOString().slice(0,10);
+const vM = m => m&&typeof m.id==='string'&&typeof m.name==='string'&&m.name.length>0;
+const vE = e => e&&typeof e.id==='string'&&typeof e.title==='string';
+const vB = b => b&&typeof b.id==='string'&&typeof b.amount==='number'&&b.amount>=0;
+const vS = i => i&&typeof i.id==='string'&&typeof i.text==='string';
+const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
+const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
+
+// ── Config persistence ────────────────────────────────────────────────────────
+const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
+const saveCfg = cfg => { try { localStorage.setItem(LS_CFG,JSON.stringify(cfg)) } catch {} };
+const clearCfg = () => { try { localStorage.removeItem(LS_CFG) } catch {} };
+
+// ── App ───────────────────────────────────────────────────────────────────────
+let _db = null;
+
+function App() {
+  const [cfg, setCfg] = useState(loadCfg);
+  const [db,  setDb]  = useState(null);
+
+  useEffect(() => {
+    if (!cfg) { _db = null; setDb(null); return; }
+    try {
+      const app = initializeApp(cfg, `wagaya-${Date.now()}`);
+      _db = getDatabase(app);
+      setDb(_db);
+    } catch(e) {
+      console.error('Firebase init:', e);
+      setDb(null);
+    }
+  }, [cfg]);
+
+  const handleSave = useCallback(newCfg => { saveCfg(newCfg); setCfg(newCfg); }, []);
+  const handleReset = useCallback(() => { clearCfg(); _db=null; setCfg(null); setDb(null); }, []);
+
+  if (!cfg || !db) return h(SetupScreen, { onSave: handleSave });
+  return h(MainApp, { db, onReset: handleReset });
+}
+
+// ═══════════════════════ SETUP SCREEN ════════════════════════════════════════
+function SetupScreen({ onSave }) {
+  const [step,    setStep]    = useState('firebase'); // firebase | deploy | install
+  const [apiKey,  setApiKey]  = useState('');
+  const [projId,  setProjId]  = useState('');
+  const [dbUrl,   setDbUrl]   = useState('');
+  const [err,     setErr]     = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const tryConnect = async () => {
+    setErr(''); setLoading(true);
+    const k=clean(apiKey,250), p=clean(projId,100), u=clean(dbUrl,300);
+    if (!k||!p||!u) { setErr('3つすべて入力してください'); setLoading(false); return; }
+    if (!u.startsWith('https://')) { setErr('データベースURLは https:// で始まります'); setLoading(false); return; }
+    const cfg = {
+      apiKey: k,
+      authDomain: `${p}.firebaseapp.com`,
+      databaseURL: u,
+      projectId: p,
+      storageBucket: `${p}.appspot.com`,
+      messagingSenderId: '000000000000',
+      appId: '1:000000000000:web:000000',
+    };
+    try {
+      const app = initializeApp(cfg, `test-${Date.now()}`);
+      const testDb = getDatabase(app);
+      const testRef = ref(testDb, '_connectionTest');
+      await set(testRef, { ok: true, ts: Date.now() });
+      await remove(testRef);
+      onSave(cfg);
+    } catch(e) {
+      setErr('接続できませんでした。\n入力値を確認してください。\n\nエラー: ' + e.message);
+    }
+    setLoading(false);
+  };
+
+  const steps = [['firebase','① Firebase'],['deploy','② 公開'],['install','③ 追加']];
+
+  return h('div', { className:'setup-bg' },
+    h('div', { style:{fontSize:52,marginBottom:8} }, '🏠'),
+    h('div', { className:'setup-title' }, 'わが家の手帳'),
+    h('div', { className:'setup-sub' }, 'スマホだけで5分セットアップ\nログイン不要・全員リアルタイム同期'),
+
+    // Step tabs
+    h('div', { className:'step-tabs' },
+      steps.map(([k,label]) =>
+        h('button', { key:k, className:'step-tab '+(step===k?'on':'off'), onClick:()=>setStep(k) }, label)
+      )
+    ),
+
+    // ── STEP 1: Firebase ─────────────────────────────────────────────────────
+    step === 'firebase' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:12} }, '🔥 Firebase設定（無料）'),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '1'),
+          h('div', { className:'instruction-text' },
+            h('a', { href:'https://console.firebase.google.com/', target:'_blank', className:'link-btn' }, '🔗 Firebase Consoleを開く'),
+            h('br'), 'Googleアカウントでログインし、',h('b',null,'「プロジェクトを作成」'),'をタップ'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '2'),
+          h('div', { className:'instruction-text' },
+            'プロジェクト名（例: wagaya）を入力 → 作成',h('br'),
+            '完成画面で',h('b',null,'「続行」'),'をタップ'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '3'),
+          h('div', { className:'instruction-text' },
+            '左メニュー →',h('b',null,'「構築」→「Realtime Database」'),h('br'),
+            h('b',null,'「データベースを作成」'),'→ 場所は',h('b',null,'「asia-southeast1」'),'→ ',h('b',null,'「テストモード」'),'で開始'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '4'),
+          h('div', { className:'instruction-text' },
+            '左メニュー →',h('b',null,'「プロジェクトの概要」⚙ → 「プロジェクトの設定」'),h('br'),
+            '下にスクロール →',h('b',null,'「マイアプリ」'),h('br'),
+            '「</>」(Web)アイコンをタップ → アプリ名を入力 → 登録',h('br'),
+            h('b',null,'firebaseConfig の中の3つの値をコピー'),'してください'
+          )
+        ),
+      ),
+
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:13,fontWeight:800,color:'#AAA',letterSpacing:'.5px',marginBottom:10} }, 'コピーした値を貼り付け'),
+        err && h('div', { className:'err-msg' }, err.split('\n').map((l,i)=>h('span',{key:i},l,h('br',null)))),
+        h('input', { className:'field field-mono', placeholder:'apiKey (例: AIzaSy...)', value:apiKey, onChange:e=>setApiKey(e.target.value) }),
+        h('input', { className:'field field-mono', placeholder:'projectId (例: wagaya-abc12)', value:projId, onChange:e=>setProjId(e.target.value) }),
+        h('input', { className:'field field-mono', placeholder:'databaseURL (例: https://wagaya-abc12-default-rtdb.asia-southeast1.firebasedatabase.app)', value:dbUrl, onChange:e=>setDbUrl(e.target.value) }),
+        h('button', { className:'btn btn-grad', onClick:tryConnect, disabled:loading },
+          loading ? h(Fragment,null,h('span',{className:'spinner'}),'接続確認中…') : '✅ 接続してアプリを開く'
+        ),
+      ),
+
+      h('div', { className:'box box-yellow' },
+        h('strong', null, '💡 費用・プライバシーについて'),
+        'Firebaseの無料枠（Spark）で十分です。月100万回の読み書きまで無料。家族5人が毎日使っても余裕があります。データはあなたのFirebaseアカウントにのみ保存されます。'
+      ),
+    ),
+
+    // ── STEP 2: Deploy ───────────────────────────────────────────────────────
+    step === 'deploy' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:12} }, '🌐 アプリを家族に公開する（無料）'),
+        h('div', { className:'box box-blue', style:{marginBottom:14} },
+          h('strong', null, 'この手順はPCがある場合のみ必要です'),
+          'スマホだけで使う場合、このHTMLファイルをブックマークして直接開けば各自のデータで使えます。',h('br'),
+          'Firebaseで同期する場合もURLを共有してください。'
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '1'),
+          h('div', { className:'instruction-text' },
+            'PCでこのHTMLファイルを開き、「名前をつけて保存」で',h('b',null,'index.html'),'として保存'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '2'),
+          h('div', { className:'instruction-text' },
+            h('a', { href:'https://app.netlify.com/drop', target:'_blank', className:'link-btn' }, '🔗 Netlify Dropを開く'),h('br'),
+            'index.htmlをドラッグ＆ドロップ'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '3'),
+          h('div', { className:'instruction-text' },
+            '発行されたURL（例: sparkling-cat.netlify.app）を',h('br'),
+            h('b',null,'LINEの家族グループ'),'に送る'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '4'),
+          h('div', { className:'instruction-text' },
+            '家族全員がURLを開き、①のFirebase設定を入力して完了'
+          )
+        ),
+      ),
+    ),
+
+    // ── STEP 3: Install ──────────────────────────────────────────────────────
+    step === 'install' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:14} }, '📲 ホーム画面に追加してアプリとして使う'),
+
+        isIOS
+          ? h(Fragment, null,
+              h('div', { className:'box box-blue', style:{marginBottom:12} }, h('strong',null,'iPhone / iPad の場合')),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'1'),
+                h('div',{className:'instruction-text'},'Safariでアプリのページを開く（ChromeはNG）')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'2'),
+                h('div',{className:'instruction-text'},'画面下の',h('b',null,'「共有」ボタン（□↑）'),'をタップ')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'3'),
+                h('div',{className:'instruction-text'},h('b',null,'「ホーム画面に追加」'),'をタップ → 追加')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'4'),
+                h('div',{className:'instruction-text'},'ホーム画面に「わが家の手帳」アイコンが現れます')
+              ),
+            )
+          : h(Fragment, null,
+              h('div', { className:'box box-green', style:{marginBottom:12} }, h('strong',null,'Android の場合')),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'1'),
+                h('div',{className:'instruction-text'},'Chromeでアプリのページを開く')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'2'),
+                h('div',{className:'instruction-text'},'右上の',h('b',null,'「⋮」メニュー'),'→',h('b',null,'「ホーム画面に追加」'))
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'3'),
+                h('div',{className:'instruction-text'},'「追加」をタップ → ホーム画面にアイコンが現れます')
+              ),
+            ),
+
+        h('div', { className:'box box-yellow', style:{marginTop:10} },
+          'ホーム画面から起動するとフルスクリーンで開き、アプリそのものとして使えます。'
+        ),
+      ),
+    ),
+  );
+}
+
+// ═══════════════════════ MAIN APP ════════════════════════════════════════════
+function MainApp({ db, onReset }) {
+  const [tab,      setTab]      = useState('shop');
+  const [synced,   setSynced]   = useState(false);
+  const [members,  setMembers]  = useState(DEF_MEMBERS);
+  const [events,   setEvents]   = useState([]);
+  const [budget,   setBudget]   = useState([]);
+  const [shopping, setShopping] = useState([]);
+  const [shopCats, setShopCats] = useState(DEF_CATS);
+
+  // Track writes to avoid echo
+  const writing = useRef({});
+
+  // ── Firebase listeners ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!db) return;
+    const unsubs = [];
+    const listen = (path, setter, validator, def) => {
+      const r = ref(db, `${DB_PATH}/${path}`);
+      const u = onValue(r, snap => {
+        if (writing.current[path]) return; // skip echo of own write
+        const v = snap.val();
+        if (v === null) { setter(def); setSynced(true); return; }
+        const arr = safeArr(Object.values(v), validator);
+        setter(arr.length > 0 ? arr : def);
+        setSynced(true);
+      }, () => setSynced(false));
+      unsubs.push(u);
+    };
+    listen('members',  setMembers,  vM, DEF_MEMBERS);
+    listen('events',   setEvents,   vE, []);
+    listen('budget',   setBudget,   vB, []);
+    listen('shopping', setShopping, vS, []);
+    listen('shopCats', setShopCats, vC, DEF_CATS);
+    return () => unsubs.forEach(u => u());
+  }, [db]);
+
+  // ── Write helper: flag to suppress echo, then write ───────────────────────
+  const writeDb = useCallback((path, arr) => {
+    if (!db) return;
+    writing.current[path] = true;
+    const obj = {};
+    arr.forEach(item => { obj[item.id] = item; });
+    set(ref(db, `${DB_PATH}/${path}`), Object.keys(obj).length ? obj : null)
+      .catch(() => {})
+      .finally(() => { setTimeout(() => { writing.current[path] = false; }, 3000); });
+  }, [db]);
+
+  // Sync to Firebase on every change
+  useEffect(() => { if (synced) writeDb('members',  members);  }, [members]);
+  useEffect(() => { if (synced) writeDb('events',   events);   }, [events]);
+  useEffect(() => { if (synced) writeDb('budget',   budget);   }, [budget]);
+  useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
+  useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
+
+  const TABS = [
+    { k:'shop',   label:'🛒 買い物' },
+    { k:'cal',    label:'📅 予定' },
+    { k:'budget', label:'💰 家計' },
+    { k:'cfg',    label:'⚙️' },
+  ];
+
+  return h('div', { className:'shell' },
+    // Header
+    h('div', { className:'hdr' },
+      h('div', { className:'hdr-top' },
+        h('span', { style:{fontSize:26} }, '🏠'),
+        h('div', { className:'hdr-title' }, 'わが家の手帳'),
+        h('div', { className:'sync-pill' },
+          h('div', { className:'sync-dot', style:{background: synced ? '#4CAF50' : '#FF9800'} }),
+          synced ? '同期中' : '接続中…'
+        ),
+        h('div', { className:'hdr-members' },
+          members.map(m => h('span', { key:m.id, title:m.name }, m.emoji))
+        ),
+      ),
+      h('div', { className:'tabs' },
+        TABS.map(t => h('button', { key:t.k, className:'tab'+(tab===t.k?' on':''), onClick:()=>setTab(t.k) }, t.label))
+      ),
+    ),
+    // Content
+    h('div', { className:'content' },
+      tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
+      tab==='cal'    && h(CalTab,    { events, setEvents, members }),
+      tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
+      tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
+    ),
+  );
+}
+
+// ═══════════════════════ SHOPPING ════════════════════════════════════════════
+function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
+  const [text,    setText]    = useState('');
+  const [memId,   setMemId]   = useState(members[0]?.id ?? '');
+  const [catId,   setCatId]   = useState(shopCats[0]?.id ?? '');
+  const [filter,  setFilter]  = useState('all');
+  const [showMgr, setShowMgr] = useState(false);
+  const [newCatNm,setNewCatNm]= useState('');
+  const [newCatCl,setNewCatCl]= useState(PAL[0]);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
+  useEffect(() => { if (!catId && shopCats[0]) setCatId(shopCats[0].id); }, [shopCats]);
+
+  const add = () => {
+    const t = clean(text);
+    if (!t || shopping.length >= LIM.items) return;
+    const cid = shopCats.some(c => c.id === catId) ? catId : shopCats[0]?.id ?? '';
+    setShopping(p => [...p, { id:uid(), text:t, memberId:memId, catId:cid, done:false }]);
+    setText('');
+    inputRef.current?.focus();
+  };
+  const toggle    = id => setShopping(p => p.map(i => i.id===id ? {...i,done:!i.done} : i));
+  const del       = id => setShopping(p => p.filter(i => i.id!==id));
+  const clearDone = ()  => setShopping(p => p.filter(i => !i.done));
+  const addCat = () => {
+    const name = clean(newCatNm);
+    if (!name || shopCats.length >= LIM.cats || shopCats.some(c => c.name===name)) return;
+    setShopCats(p => [...p, { id:uid(), name, color:cleanClr(newCatCl) }]);
+    setNewCatNm('');
+  };
+  const delCat = id => {
+    const next = shopCats.filter(c => c.id!==id);
+    if (!next.length) return;
+    const fb = next[0].id;
+    setShopCats(next);
+    setShopping(p => p.map(i => i.catId===id ? {...i,catId:fb} : i));
+    if (filter===id) setFilter('all');
+    if (catId===id)  setCatId(fb);
+  };
+
+  const pending  = shopping.filter(i => !i.done);
+  const done     = shopping.filter(i =>  i.done);
+  const catsUsed = shopCats.filter(c => shopping.some(i => i.catId===c.id));
+  const groups   = shopCats.map(cat => ({
+    cat,
+    pending: shopping.filter(i => i.catId===cat.id && !i.done),
+    done:    shopping.filter(i => i.catId===cat.id &&  i.done),
+  })).filter(g => g.pending.length+g.done.length > 0);
+  const filtered = filter==='all' ? null : shopping.filter(i => i.catId===filter);
+
+  return h(Fragment, null,
+    // Summary
+    h('div', { style:{display:'flex',gap:9,marginBottom:12} },
+      [{label:'残り',val:pending.length,color:'#FF5E8A',icon:'📝'},
+       {label:'完了',val:done.length,color:'#4CAF50',icon:'✅'}]
+      .map(s => h('div',{key:s.label,style:{flex:1,background:'#fff',borderRadius:16,padding:'12px 8px',textAlign:'center',boxShadow:'0 2px 10px rgba(0,0,0,.055)'}},
+        h('div',{style:{fontSize:22}},s.icon),
+        h('div',{style:{fontSize:26,fontWeight:800,color:s.color}},s.val),
+        h('div',{style:{fontSize:11,color:'#AAA',fontWeight:700}},s.label),
+      ))
+    ),
+    // Add card
+    h('div', { className:'card' },
+      h('div', { style:{display:'flex',gap:8,marginBottom:10} },
+        h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1}, placeholder:'商品を追加…', maxLength:LIM.text,
+          value:text, onChange:e=>setText(e.target.value), onKeyDown:e=>e.key==='Enter'&&add() }),
+        h('button', { onClick:add, style:{padding:'0 18px',background:'#FF5E8A',color:'#fff',borderRadius:12,fontSize:24,fontWeight:900,boxShadow:'0 3px 12px rgba(255,94,138,.32)',flexShrink:0} }, '＋'),
+      ),
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '🏪 カテゴリ'),
+        h('div', { className:'chip-row' },
+          shopCats.map(cat => h('button', { key:cat.id, className:'chip'+(catId===cat.id?' on':''),
+            style:{color:catId===cat.id?cat.color:'#888',borderColor:catId===cat.id?cat.color:'#E5E5E5'},
+            onClick:()=>setCatId(cat.id) }, cat.name))
+        ),
+      ),
+      h('div', null,
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 担当'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
+            onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
+        ),
+      ),
+    ),
+    // Cat manager toggle
+    h('button', { className:'btn btn-ghost'+(showMgr?' warn':''), style:{marginBottom:10,width:'100%'}, onClick:()=>setShowMgr(p=>!p) },
+      showMgr ? '✕ カテゴリ管理を閉じる' : '⚙ カテゴリを管理・追加する'),
+    showMgr && h('div', { className:'card fi', style:{borderLeft:'3px solid #A855F7'} },
+      h('div', { className:'card-label' }, 'カテゴリ管理'),
+      shopCats.map(cat => h('div', { key:cat.id, className:'m-row' },
+        h('div', { style:{width:11,height:11,borderRadius:'50%',background:cat.color,flexShrink:0} }),
+        h('span', { style:{flex:1,fontSize:14,fontWeight:600} }, cat.name),
+        h('span', { style:{fontSize:11,color:'#BBB'} }, shopping.filter(i=>i.catId===cat.id).length+'件'),
+        h('button', { className:'del', disabled:shopCats.length<=1, style:{opacity:shopCats.length<=1?.25:1}, onClick:()=>delCat(cat.id) }, '✕'),
+      )),
+      shopCats.length < LIM.cats && h(Fragment, null,
+        h('div', { className:'sep' }, '新しいカテゴリ'),
+        h('input', { className:'field', placeholder:'カテゴリ名', maxLength:LIM.text, value:newCatNm, onChange:e=>setNewCatNm(e.target.value), onKeyDown:e=>e.key==='Enter'&&addCat() }),
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, 'カラー'),
+        h('div', { className:'palette' }, PAL.map(c => h('button', { key:c, className:'pal-dot'+(newCatCl===c?' on':''), style:{background:c}, onClick:()=>setNewCatCl(c) }))),
+        h('button', { className:'btn btn-purple', style:{boxShadow:'none',background:newCatNm.trim()?undefined:'#E0E0E0',color:newCatNm.trim()?'#fff':'#BBB'}, onClick:addCat, disabled:!newCatNm.trim() }, 'カテゴリを追加'),
+      ),
+    ),
+    // Filter chips
+    catsUsed.length > 1 && h('div', { className:'chip-row', style:{marginBottom:10} },
+      h('button', { className:'chip'+(filter==='all'?' on':''),
+        style:{color:filter==='all'?'#333':'#888',borderColor:filter==='all'?'#333':'#E5E5E5',background:filter==='all'?'#EEE':'#fff'},
+        onClick:()=>setFilter('all') }, '🗂 すべて'),
+      catsUsed.map(cat => {
+        const cnt = shopping.filter(i=>i.catId===cat.id&&!i.done).length;
+        return h('button', { key:cat.id, className:'chip'+(filter===cat.id?' on':''),
+          style:{color:filter===cat.id?cat.color:'#888',borderColor:filter===cat.id?cat.color:'#E5E5E5'},
+          onClick:()=>setFilter(cat.id) }, cat.name+(cnt>0?` (${cnt})`:''));
+      })
+    ),
+    // Items
+    filter==='all'
+      ? groups.length===0
+          ? h('div', {className:'empty'}, h('span',{className:'empty-ico'},'🛒'),'買い物リストは空です\n上から商品を追加しましょう')
+          : h(Fragment, null, groups.map(g => h('div', { key:g.cat.id, className:'cat-group su' },
+              h('div', { className:'cat-hdr' },
+                h('div', { className:'cat-dot', style:{background:g.cat.color} }),
+                h('div', { className:'cat-name', style:{color:g.cat.color} }, g.cat.name),
+                g.pending.length>0 && h('div', { className:'cat-cnt', style:{background:g.cat.color+'1A',color:g.cat.color} }, g.pending.length+'件'),
+              ),
+              h('div', { className:'cat-items' },
+                g.pending.map(item => h(ShopItem, { key:item.id, item, members, onToggle:toggle, onDel:del })),
+                g.done.length>0 && h('div', { style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4} },
+                  g.done.map(item => h(ShopItem, { key:item.id, item, members, onToggle:toggle, onDel:del })),
+                ),
+              ),
+            )))
+      : h('div', { className:'card' },
+          (filtered??[]).length===0
+            ? h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'📭'),'このカテゴリに商品はありません')
+            : h(Fragment,null,
+                (filtered??[]).filter(i=>!i.done).map(item=>h(ShopItem,{key:item.id,item,members,onToggle:toggle,onDel:del})),
+                (filtered??[]).filter(i=>i.done).length>0&&h('div',{style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4}},
+                  (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,onToggle:toggle,onDel:del}))
+                ),
+              )
+        ),
+    done.length>0 && h('button', { className:'btn btn-ghost warn', style:{width:'100%',marginTop:4}, onClick:clearDone },
+      `✅ 完了済みを削除 (${done.length}件)`),
+  );
+}
+function ShopItem({ item, members, onToggle, onDel }) {
+  const m = members.find(x=>x.id===item.memberId) ?? members[0];
+  return h('div', { className:'shop-item'+(item.done?' done':'') },
+    h('button', { className:'chk'+(item.done?' on':''), onClick:()=>onToggle(item.id) },
+      item.done && h('span', { className:'chk-icon' }, '✓')),
+    h('span', { style:{fontSize:19,flexShrink:0} }, m?.emoji),
+    h('span', { className:'shop-txt'+(item.done?' done':'') }, item.text),
+    h('span', { className:'shop-who', style:{color:m?.color} }, m?.name),
+    h('button', { className:'del', onClick:()=>onDel(item.id) }, '✕'),
+  );
+}
+
+// ═══════════════════════ CALENDAR ════════════════════════════════════════════
+function CalTab({ events, setEvents, members }) {
+  const [cur,  setCur]  = useState(new Date());
+  const [sel,  setSel]  = useState(null);
+  const [show, setShow] = useState(false);
+  const [form, setForm] = useState({ title:'', date:'', time:'', allDay:true, memberId:members[0]?.id??'', note:'' });
+  const sf = k => v => setForm(p => ({...p,[k]:v}));
+  const now = new Date();
+  const yr=cur.getFullYear(), mo=cur.getMonth();
+  const fd=new Date(yr,mo,1).getDay(), dim=new Date(yr,mo+1,0).getDate();
+
+  const addEv = () => {
+    const title=clean(form.title), date=cleanDate(form.date);
+    if (!title||!date||events.length>=LIM.events) return;
+    setEvents(p=>[...p,{id:uid(),title,date,time:form.allDay?'':cleanTime(form.time),allDay:Boolean(form.allDay),memberId:form.memberId,note:clean(form.note,LIM.note)}]);
+    setForm({title:'',date:'',time:'',allDay:true,memberId:members[0]?.id??'',note:''});
+    setShow(false);
+  };
+  const delEv = id => setEvents(p=>p.filter(e=>e.id!==id));
+  const dayEvs = d => {
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return events.filter(e=>e.date===ds).sort((a,b)=>{
+      if(a.allDay&&!b.allDay)return -1;if(!a.allDay&&b.allDay)return 1;
+      return(a.time||'').localeCompare(b.time||'');
+    });
+  };
+  const upcoming=events.filter(e=>e.date>=today()).sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):(a.time||'').localeCompare(b.time||'')).slice(0,7);
+
+  return h(Fragment,null,
+    h('div',{className:'cal-nav'},
+      h('button',{className:'cal-arr',onClick:()=>setCur(new Date(yr,mo-1))},'‹'),
+      h('div',{className:'cal-mo'},yr+'年 '+(mo+1)+'月'),
+      h('button',{className:'cal-arr',onClick:()=>setCur(new Date(yr,mo+1))},'›'),
+    ),
+    h('div',{className:'cal-grid'},
+      h('div',{className:'cal-head'},['日','月','火','水','木','金','土'].map((d,i)=>h('div',{key:d,className:'cal-dow'+(i===0?' s':i===6?' sa':'')},d))),
+      h('div',{className:'cal-body'},
+        Array(fd).fill(null).map((_,i)=>h('div',{key:'e'+i,className:'cal-cell empty'})),
+        Array(dim).fill(null).map((_,i)=>{
+          const d=i+1,dow=(fd+i)%7,devs=dayEvs(d);
+          const isToday=now.getDate()===d&&now.getMonth()===mo&&now.getFullYear()===yr;
+          return h('div',{key:d,className:'cal-cell'+(sel===d?' sel':''),onClick:()=>setSel(sel===d?null:d)},
+            h('div',{className:'cal-num'+(isToday?' today':dow===0?' s':dow===6?' sa':'')},d),
+            devs.length>0&&h('div',{className:'cal-dots'},devs.slice(0,4).map(ev=>{
+              const m=members.find(x=>x.id===ev.memberId)??members[0];
+              return h('div',{key:ev.id,className:'cal-dot',style:{background:m?.color??'#ccc'}});
+            })),
+          );
+        }),
+      ),
+    ),
+    sel!==null&&h('div',{className:'card su'},
+      h('div',{style:{fontWeight:800,color:'#FF5E8A',marginBottom:10,fontSize:15}},(mo+1)+'月'+sel+'日の予定'),
+      dayEvs(sel).length===0?h('div',{style:{color:'#BBB',fontSize:13,padding:'6px 0'}},'予定はありません'):dayEvs(sel).map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv})),
+      h('button',{style:{marginTop:10,padding:'7px 16px',background:'#FFF0F5',border:'2px solid #FF5E8A',color:'#FF5E8A',borderRadius:10,fontSize:13,fontWeight:800},
+        onClick:()=>{const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(sel).padStart(2,'0')}`;sf('date')(ds);setShow(true)}},'＋ この日に追加'),
+    ),
+    h('button',{className:'btn btn-purple',style:{marginBottom:12},onClick:()=>setShow(p=>!p)},show?'✕ 閉じる':'＋ 予定を追加する'),
+    show&&h('div',{className:'card fi'},
+      h('div',{className:'card-label'},'新しい予定'),
+      h('input',{className:'field',placeholder:'タイトル',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
+      h('input',{className:'field',type:'date',value:form.date,onChange:e=>sf('date')(e.target.value)}),
+      h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10}},
+        h('button',{className:'toggle'+(form.allDay?' on':''),onClick:()=>setForm(p=>({...p,allDay:!p.allDay,time:''}))},form.allDay?'✓ 終日':'終日'),
+        !form.allDay?h('input',{className:'field',type:'time',style:{margin:0,flex:1},value:form.time,onChange:e=>sf('time')(e.target.value)}):h('span',{style:{fontSize:12,color:'#BBB'}},'→ タップして時間を指定'),
+      ),
+      h('div',{style:{marginBottom:10}},
+        h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'👤 誰の予定？'),
+        h('div',{className:'chips'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},onClick:()=>sf('memberId')(m.id)},m.emoji+' '+m.name))),
+      ),
+      h('input',{className:'field',placeholder:'メモ（任意）',maxLength:LIM.note,value:form.note,onChange:e=>sf('note')(e.target.value)}),
+      h('button',{className:'btn btn-grad',onClick:addEv},'追加する'),
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'直近の予定'),
+      upcoming.length===0?h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'直近の予定はありません'):upcoming.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,compact:true})),
+    ),
+  );
+}
+function EvRow({ ev, members, onDel, compact }) {
+  const m=members.find(x=>x.id===ev.memberId)??members[0];
+  return h('div',{className:compact?'m-row':'ev-row'},
+    h('span',{style:{fontSize:20,flexShrink:0}},m?.emoji),
+    h('div',{style:{flex:1,minWidth:0}},
+      h('div',{style:{fontSize:14,fontWeight:700}},ev.title),
+      h('div',{style:{display:'flex',gap:5,marginTop:3,flexWrap:'wrap',alignItems:'center'}},
+        compact&&h('span',{style:{fontSize:11,color:'#BBB'}},ev.date),
+        ev.allDay?h('span',{className:'badge badge-all'},'終日'):ev.time&&h('span',{className:'badge badge-t'},'🕐 '+ev.time),
+        h('span',{style:{fontSize:11,fontWeight:800,color:m?.color}},m?.name),
+      ),
+      ev.note&&!compact&&h('div',{style:{fontSize:12,color:'#AAA',marginTop:2}},ev.note),
+    ),
+    h('button',{className:'del',onClick:()=>onDel(ev.id)},'✕'),
+  );
+}
+
+// ═══════════════════════ BUDGET ══════════════════════════════════════════════
+function BudgetTab({ budget, setBudget, members }) {
+  const[show,setShow]=useState(false);
+  const[filter,setFilter]=useState('all');
+  const[form,setForm]=useState({title:'',amount:'',category:'食費',memberId:members[0]?.id??'',date:today(),type:'expense'});
+  const sf=k=>v=>setForm(p=>({...p,[k]:v}));
+  const add=()=>{
+    const title=clean(form.title),amount=cleanAmt(form.amount);
+    if(!title||amount<=0||budget.length>=LIM.budget)return;
+    setBudget(p=>[...p,{id:uid(),title,amount,category:BCATS.includes(form.category)?form.category:'その他',memberId:form.memberId,date:cleanDate(form.date)||today(),type:form.type==='income'?'income':'expense'}]);
+    setForm({title:'',amount:'',category:'食費',memberId:members[0]?.id??'',date:today(),type:'expense'});setShow(false);
+  };
+  const del=id=>setBudget(p=>p.filter(b=>b.id!==id));
+  const thisM=new Date().toISOString().slice(0,7);
+  const monthly=budget.filter(b=>b.date.startsWith(thisM));
+  const totExp=monthly.filter(b=>b.type==='expense').reduce((s,b)=>s+b.amount,0);
+  const totInc=monthly.filter(b=>b.type==='income').reduce((s,b)=>s+b.amount,0);
+  const bal=totInc-totExp;
+  const visible=filter==='all'?budget:budget.filter(b=>b.type===filter);
+
+  return h(Fragment,null,
+    h('div',{className:'sum-grid'},
+      [{label:'今月の収入',val:totInc,color:'#4CAF50',icon:'📈'},{label:'今月の支出',val:totExp,color:'#FF5E8A',icon:'📉'},{label:'収支',val:bal,color:bal>=0?'#4CAF50':'#FF5E8A',icon:'💹'}]
+      .map(s=>h('div',{key:s.label,className:'sum-card'},h('div',{style:{fontSize:22,marginBottom:3}},s.icon),h('div',{style:{fontSize:10,color:'#AAA',fontWeight:700,marginBottom:2}},s.label),h('div',{style:{fontSize:14,fontWeight:800,color:s.color}},(s.val<0?'-':'')+'¥'+Math.abs(s.val).toLocaleString())))
+    ),
+    totExp>0&&h('div',{className:'card'},h('div',{className:'card-label'},'今月のカテゴリ別支出'),
+      BCATS.map(cat=>{
+        const tot=monthly.filter(b=>b.type==='expense'&&b.category===cat).reduce((s,b)=>s+b.amount,0);
+        if(!tot)return null;
+        const pct=totExp>0?tot/totExp*100:0;
+        return h('div',{key:cat,className:'bar-row'},
+          h('div',{className:'bar-lbl'},h('span',{style:{fontWeight:700,color:BCLR[cat]}},cat),h('span',{style:{color:'#555'}},'¥'+tot.toLocaleString()+' ('+pct.toFixed(0)+'%)')),
+          h('div',{className:'bar-track'},h('div',{className:'bar-fill',style:{width:pct+'%',background:BCLR[cat]}})),
+        );
+      })
+    ),
+    h('button',{className:'btn btn-purple',style:{marginBottom:12},onClick:()=>setShow(p=>!p)},show?'✕ 閉じる':'＋ 収支を記録する'),
+    show&&h('div',{className:'card fi'},
+      h('div',{className:'card-label'},'収支を記録'),
+      h('div',{className:'type-row'},[{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t=>h('button',{key:t.k,className:'type-btn'+(form.type===t.k?' on':''),onClick:()=>sf('type')(t.k)},t.label))),
+      h('input',{className:'field',placeholder:'内容',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
+      h('input',{className:'field',type:'number',placeholder:'金額',min:0,max:LIM.amount,value:form.amount,onChange:e=>sf('amount')(e.target.value)}),
+      h('select',{className:'field',value:form.category,onChange:e=>sf('category')(e.target.value)},BCATS.map(c=>h('option',{key:c},c))),
+      h('input',{className:'field',type:'date',value:form.date,onChange:e=>sf('date')(e.target.value)}),
+      h('div',{style:{marginBottom:10}},
+        h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'👤 誰が？'),
+        h('div',{className:'chips'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},onClick:()=>sf('memberId')(m.id)},m.emoji+' '+m.name))),
+      ),
+      h('button',{className:'btn btn-grad',onClick:add},'追加する'),
+    ),
+    h('div',{className:'chip-row',style:{marginBottom:10}},[{k:'all',l:'すべて'},{k:'expense',l:'支出'},{k:'income',l:'収入'}].map(f=>h('button',{key:f.k,className:'chip'+(filter===f.k?' on':''),style:{color:filter===f.k?'#333':'#888',borderColor:filter===f.k?'#333':'#E5E5E5',background:filter===f.k?'#EEE':'#fff'},onClick:()=>setFilter(f.k)},f.l))),
+    h('div',{className:'card'},
+      visible.length===0?h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'💳'),'記録がありません')
+      :[...visible].sort((a,b)=>b.date.localeCompare(a.date)).map(b=>{
+        const m=members.find(x=>x.id===b.memberId)??members[0];
+        return h('div',{key:b.id,className:'b-row'},
+          h('div',{className:'b-icon',style:{background:BCLR[b.category]+'28'}},m?.emoji),
+          h('div',{style:{flex:1,minWidth:0}},h('div',{style:{fontSize:14,fontWeight:700}},b.title),h('div',{style:{fontSize:11,color:'#AAA',marginTop:1}},b.date+' · ',h('span',{style:{color:BCLR[b.category],fontWeight:700}},b.category))),
+          h('div',{style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0}},(b.type==='income'?'+':'-')+'¥'+b.amount.toLocaleString()),
+          h('button',{className:'del',onClick:()=>del(b.id)},'✕'),
+        );
+      })
+    ),
+  );
+}
+
+// ═══════════════════════ SETTINGS ════════════════════════════════════════════
+function CfgTab({ members, setMembers, onReset }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmoji,setNewEmoji]= useState(EMOJIS[0]);
+  const [newClr,  setNewClr]  = useState(PAL[0]);
+  const addM = () => {
+    const name=clean(newName,20);
+    if(!name||members.length>=LIM.members)return;
+    setMembers(p=>[...p,{id:uid(),name,emoji:newEmoji,color:cleanClr(newClr)}]);
+    setNewName('');setShowAdd(false);
+  };
+  const delM = id => { if(members.length<=1)return; setMembers(p=>p.filter(m=>m.id!==id)); };
+
+  return h(Fragment, null,
+    h('div',{className:'box box-green'},
+      h('strong',null,'🟢 リアルタイム同期中'),
+      'Firebaseで全員のデータが自動同期されます。同じURLを開くだけで家族全員が最新データを見られます。'
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'家族メンバー'),
+      members.map(m=>h('div',{key:m.id,className:'m-row'},
+        h('span',{style:{fontSize:24}},m.emoji),
+        h('div',{style:{flex:1}},h('div',{style:{fontSize:15,fontWeight:700}},m.name)),
+        h('div',{style:{width:13,height:13,borderRadius:'50%',background:m.color}}),
+        h('button',{className:'del',disabled:members.length<=1,style:{opacity:members.length<=1?.22:1},onClick:()=>delM(m.id)},'✕'),
+      )),
+      members.length<LIM.members&&h(Fragment,null,
+        h('button',{className:'btn btn-ghost'+(showAdd?' warn':''),style:{marginTop:12,width:'100%'},onClick:()=>setShowAdd(p=>!p)},showAdd?'✕ 閉じる':'＋ メンバーを追加'),
+        showAdd&&h('div',{className:'fi',style:{marginTop:12}},
+          h('input',{className:'field',placeholder:'名前（例: じいじ、ばあば）',maxLength:20,value:newName,onChange:e=>setNewName(e.target.value)}),
+          h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'絵文字'),
+          h('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}},EMOJIS.map(e=>h('button',{key:e,style:{fontSize:24,padding:'4px 6px',borderRadius:10,border:'2px solid',borderColor:newEmoji===e?'#FF5E8A':'#E5E5E5',background:newEmoji===e?'#FFF0F5':'#fff'},onClick:()=>setNewEmoji(e)},e))),
+          h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'カラー'),
+          h('div',{className:'palette'},PAL.slice(0,12).map(c=>h('button',{key:c,className:'pal-dot'+(newClr===c?' on':''),style:{background:c},onClick:()=>setNewClr(c)}))),
+          h('button',{className:'btn btn-grad',style:{background:newName.trim()?undefined:'#DDD',boxShadow:'none',color:newName.trim()?'#fff':'#AAA'},disabled:!newName.trim(),onClick:addM},'メンバーを追加'),
+        ),
+      ),
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'Firebase設定'),
+      h('p',{style:{fontSize:13,color:'#888',marginBottom:12,lineHeight:1.7}},'Firebase設定をリセットして再設定画面に戻ります。データはFirebase上に残ります。'),
+      h('button',{className:'btn btn-ghost warn',style:{width:'100%'},onClick:()=>{if(!confirm('Firebase設定をリセットしますか？'))return;onReset()}},'🔧 Firebase設定をやり直す'),
+    ),
+  );
+}
+
+createRoot(document.getElementById('root')).render(h(App, null));
+</script>
+
+</body>
+</html>
