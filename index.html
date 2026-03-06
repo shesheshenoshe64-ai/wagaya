@@ -898,18 +898,30 @@ function BudgetTab({ budget, setBudget, members }) {
 
 // ═══════════════════════ BOARD (SWIPE) ═══════════════════════════════════════
 function BoardTab({ notes, setNotes, members }) {
-  const [text,   setText]   = useState('');
-  const [memId,  setMemId]  = useState(members[0]?.id ?? '');
-  const [showArc,setShowArc]= useState(false);
-  const [showPost,setShowPost]=useState(false);
-  const txtRef = useRef(null);
+  const [text,    setText]    = useState('');
+  const [memId,   setMemId]   = useState(members[0]?.id ?? '');
+  const [showArc, setShowArc] = useState(false);
+  const [showPost,setShowPost]= useState(false);
+  // idx = which unread card is currently on top (cycles through all unread)
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
 
-  // Only unread (not archived) in the stack, newest first
-  const stack   = [...notes].filter(n => !n.archived).sort((a,b) => b.ts - a.ts);
-  const archived= [...notes].filter(n =>  n.archived).sort((a,b) => b.ts - a.ts);
-  const top     = stack[0] ?? null;
+  const unread   = [...notes].filter(n => !n.archived).sort((a,b) => b.ts - a.ts);
+  const archived = [...notes].filter(n =>  n.archived).sort((a,b) => b.ts - a.ts);
+
+  // Keep idx in bounds whenever unread changes
+  const safeIdx = unread.length > 0 ? idx % unread.length : 0;
+  const top = unread[safeIdx] ?? null;
+
+  const fmtTime = ts => {
+    const d = new Date(ts), now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60)    return 'たった今';
+    if (diff < 3600)  return Math.floor(diff/60)+'分前';
+    if (diff < 86400) return Math.floor(diff/3600)+'時間前';
+    return (d.getMonth()+1)+'/'+d.getDate();
+  };
 
   const post = () => {
     const t = clean(text, 200);
@@ -918,29 +930,32 @@ function BoardTab({ notes, setNotes, members }) {
     setText(''); setShowPost(false);
   };
 
-  // ── Swipe logic ─────────────────────────────────────────────────────────────
-  const cardRef  = useRef(null);
-  const dragState= useRef(null);
+  // ── Actions ──────────────────────────────────────────────────────────────────
+  // Left swipe: advance to next card (leave unread)
+  const goNext = () => {
+    if (unread.length <= 1) return;
+    setIdx(i => (i + 1) % unread.length);
+  };
+  // Right swipe: mark current card archived, stay at same index (next card slides in)
+  const archiveCurrent = () => {
+    if (!top) return;
+    setNotes(p => p.map(n => n.id===top.id ? {...n, archived:true} : n));
+    // After archiving, unread shrinks by 1 — idx stays, which naturally shows the next card
+  };
+
+  // ── Swipe gesture ─────────────────────────────────────────────────────────────
+  const cardRef      = useRef(null);
+  const dragState    = useRef(null);
   const labelKeepRef = useRef(null);
   const labelDoneRef = useRef(null);
 
-  const archiveTop = (archive) => {
-    if (!top) return;
-    setNotes(p => p.map(n => n.id===top.id ? {...n, archived: archive} : n));
-  };
-
-  const onStart = (clientX, clientY) => {
-    dragState.current = { startX:clientX, startY:clientY, dx:0 };
-  };
-  const onMove = (clientX) => {
+  const onStart = clientX => { dragState.current = { startX:clientX, dx:0 }; };
+  const onMove  = clientX => {
     if (!dragState.current || !cardRef.current) return;
     const dx = clientX - dragState.current.startX;
     dragState.current.dx = dx;
-    const rot = dx * 0.06;
-    const scale = 1 - Math.abs(dx) * 0.0003;
-    cardRef.current.style.transform = `translateX(${dx}px) rotate(${rot}deg) scale(${scale})`;
-    // Labels
-    const pct = Math.min(Math.abs(dx) / 80, 1);
+    cardRef.current.style.transform = `translateX(${dx}px) rotate(${dx*0.06}deg)`;
+    const pct = Math.min(Math.abs(dx)/80, 1);
     if (labelKeepRef.current) labelKeepRef.current.style.opacity = dx < -18 ? pct : 0;
     if (labelDoneRef.current) labelDoneRef.current.style.opacity = dx >  18 ? pct : 0;
   };
@@ -951,49 +966,41 @@ function BoardTab({ notes, setNotes, members }) {
     if (labelKeepRef.current) labelKeepRef.current.style.opacity = 0;
     if (labelDoneRef.current) labelDoneRef.current.style.opacity = 0;
     if (Math.abs(dx) > 80) {
-      // Fly off screen
       const dir = dx > 0 ? 1 : -1;
-      cardRef.current.style.transition = 'transform .32s ease, opacity .32s';
-      cardRef.current.style.transform  = `translateX(${dir*420}px) rotate(${dir*18}deg)`;
+      cardRef.current.style.transition = 'transform .28s ease, opacity .28s';
+      cardRef.current.style.transform  = `translateX(${dir*440}px) rotate(${dir*16}deg)`;
       cardRef.current.style.opacity    = '0';
       setTimeout(() => {
-        archiveTop(dx > 0); // right=archived(done), left=keep unread
-        if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; cardRef.current.style.opacity=''; }
-      }, 320);
+        if (cardRef.current) {
+          cardRef.current.style.transition = '';
+          cardRef.current.style.transform  = '';
+          cardRef.current.style.opacity    = '';
+        }
+        if (dx > 0) archiveCurrent(); else goNext();
+      }, 280);
     } else {
-      // Snap back
-      cardRef.current.style.transition = 'transform .28s cubic-bezier(.25,1.4,.5,1)';
+      cardRef.current.style.transition = 'transform .25s cubic-bezier(.25,1.4,.5,1)';
       cardRef.current.style.transform  = '';
-      setTimeout(() => { if(cardRef.current) cardRef.current.style.transition=''; }, 300);
+      setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 260);
     }
   };
 
-  // Touch handlers
-  const onTouchStart = e => onStart(e.touches[0].clientX, e.touches[0].clientY);
+  const onTouchStart = e => onStart(e.touches[0].clientX);
   const onTouchMove  = e => { e.preventDefault(); onMove(e.touches[0].clientX); };
   const onTouchEnd   = () => onEnd();
-  // Mouse handlers (desktop)
-  const onMouseDown  = e => { onStart(e.clientX, e.clientY);
+  const onMouseDown  = e => {
+    onStart(e.clientX);
     const mv = e2 => onMove(e2.clientX);
-    const up = ()  => { onEnd(); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); };
+    const up = () => { onEnd(); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); };
     window.addEventListener('mousemove', mv);
     window.addEventListener('mouseup',   up);
   };
 
-  const fmtTime = ts => {
-    const d = new Date(ts), now = new Date();
-    const diff = (now - d) / 1000;
-    if (diff < 60)   return 'たった今';
-    if (diff < 3600) return Math.floor(diff/60)+'分前';
-    if (diff < 86400)return Math.floor(diff/3600)+'時間前';
-    return d.getMonth()+1+'/'+d.getDate();
-  };
-
   return h(Fragment, null,
-    // Post button + unread count
+    // Header row
     h('div', { style:{display:'flex',alignItems:'center',gap:10,marginBottom:14} },
       h('div', { style:{flex:1,fontSize:13,color:'#AAA',fontWeight:700} },
-        stack.length > 0 ? '未読 '+stack.length+'件' : 'すべて読みました！'
+        unread.length > 0 ? `未読 ${unread.length}件` : 'すべて読みました！'
       ),
       h('button', {
         style:{padding:'9px 18px',background:'linear-gradient(135deg,#FF8050,#FF5E8A)',color:'#fff',borderRadius:14,fontSize:14,fontWeight:800,boxShadow:'0 3px 12px rgba(255,94,138,.3)'},
@@ -1003,7 +1010,8 @@ function BoardTab({ notes, setNotes, members }) {
 
     // Post form
     showPost && h('div', { className:'board-post-card fi', style:{marginBottom:12} },
-      h('textarea', { className:'field', style:{minHeight:90,resize:'none',marginBottom:10}, placeholder:'家族へのメッセージを書いてください…', maxLength:200, value:text, ref:txtRef,
+      h('textarea', { className:'field', style:{minHeight:90,resize:'none',marginBottom:10},
+        placeholder:'家族へのメッセージを書いてください…', maxLength:200, value:text,
         onChange:e=>setText(e.target.value) }),
       h('div', { style:{marginBottom:10} },
         h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 投稿者'),
@@ -1018,57 +1026,47 @@ function BoardTab({ notes, setNotes, members }) {
 
     // Card stack
     h('div', { className:'board-stack' },
-      // Background cards (peek effect)
-      stack.length > 2 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(12px) scale(.88)',boxShadow:'0 4px 16px rgba(0,0,0,.08)'} }),
-      stack.length > 1 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(6px) scale(.94)',boxShadow:'0 4px 20px rgba(0,0,0,.10)'} }),
+      unread.length > 2 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(12px) scale(.88)',boxShadow:'0 4px 16px rgba(0,0,0,.08)'} }),
+      unread.length > 1 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(6px) scale(.94)',boxShadow:'0 4px 20px rgba(0,0,0,.10)'} }),
 
-      top ? h('div', {
-        ref: cardRef,
-        className: 'board-card',
-        onTouchStart, onTouchMove, onTouchEnd,
-        onMouseDown,
-      },
-        h('span', { ref:labelKeepRef, className:'swipe-label keep' }, '← あとで'),
-        h('span', { ref:labelDoneRef, className:'swipe-label done' }, '既読 →'),
-
-        // Author
-        h('div', { className:'board-who' },
-          h('div', { className:'board-avatar', style:{background:(members.find(m=>m.id===top.memberId)?.color??'#ccc')+'22'} },
-            members.find(m=>m.id===top.memberId)?.emoji ?? '👤'),
-          h('div', null,
-            h('div', { className:'board-name' }, members.find(m=>m.id===top.memberId)?.name ?? ''),
+      top
+        ? h('div', { key:top.id, ref:cardRef, className:'board-card', onTouchStart, onTouchMove, onTouchEnd, onMouseDown },
+            h('span', { ref:labelKeepRef, className:'swipe-label keep' }, '← あとで'),
+            h('span', { ref:labelDoneRef, className:'swipe-label done' }, '既読 →'),
+            h('div', { className:'board-who' },
+              h('div', { className:'board-avatar', style:{background:(members.find(m=>m.id===top.memberId)?.color??'#ccc')+'22'} },
+                members.find(m=>m.id===top.memberId)?.emoji ?? '👤'),
+              h('div', null, h('div', { className:'board-name' }, members.find(m=>m.id===top.memberId)?.name ?? '')),
+              h('div', { className:'board-time' }, fmtTime(top.ts)),
+            ),
+            unread.length > 1 && h('div', { style:{fontSize:11,color:'#CCC',fontWeight:700,marginBottom:8} },
+              `${safeIdx+1} / ${unread.length}`
+            ),
+            h('div', { className:'board-body' }, top.text),
+            h('div', { className:'board-hint' },
+              h('span', { className:'hint-left' }, '← あとで'),
+              h('span', { className:'hint-right' }, '既読 →'),
+            ),
+          )
+        : h('div', { className:'board-empty' },
+            h('div', { className:'board-empty-ico' }, notes.length > 0 ? '🎉' : '📭'),
+            notes.length > 0 ? 'すべて読みました！' : 'メッセージはありません',
           ),
-          h('div', { className:'board-time' }, fmtTime(top.ts)),
-        ),
-
-        // Body
-        h('div', { className:'board-body' }, top.text),
-
-        // Hint
-        h('div', { className:'board-hint' },
-          h('span', { className:'hint-left' }, '← あとで'),
-          h('span', { className:'hint-right' }, '既読 →'),
-        ),
-      )
-      : h('div', { className:'board-empty' },
-          h('div', { className:'board-empty-ico' }, stack.length===0 && notes.length>0 ? '🎉' : '📭'),
-          stack.length===0 && notes.length>0 ? 'すべて読みました！' : '新しいメッセージはありません',
-        ),
     ),
 
-    // Pips
-    stack.length > 0 && h('div', { className:'board-count' },
-      Array(Math.min(stack.length, 5)).fill(null).map((_,i) =>
-        h('div', { key:i, className:'board-pip'+(i===0?' on':'') })
+    // Pips — show position in unread stack
+    unread.length > 1 && h('div', { className:'board-count' },
+      Array(Math.min(unread.length, 7)).fill(null).map((_,i) =>
+        h('div', { key:i, className:'board-pip'+(i===safeIdx%Math.min(unread.length,7)?' on':'') })
       )
     ),
 
-    // Swipe buttons (for those who prefer tapping)
+    // Action buttons
     top && h('div', { style:{display:'flex',gap:10,width:'100%',marginTop:8} },
       h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#E8F0FF',color:'#3B5BDB',fontSize:14,fontWeight:800,border:'none'},
-        onClick:()=>archiveTop(false) }, '← あとで'),
+        onClick:goNext }, '← あとで'),
       h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#FFF0F5',color:'#FF5E8A',fontSize:14,fontWeight:800,border:'none'},
-        onClick:()=>archiveTop(true)  }, '既読 →'),
+        onClick:archiveCurrent }, '既読 →'),
     ),
 
     // Archived section
@@ -1078,15 +1076,14 @@ function BoardTab({ notes, setNotes, members }) {
       showArc && h('div', { className:'board-archived card fi' },
         h('div', { className:'card-label' }, '既読メッセージ'),
         archived.map(n => {
-          const m = members.find(x=>x.id===n.memberId)??members[0];
+          const m = members.find(x=>x.id===n.memberId) ?? members[0];
           return h('div', { key:n.id, className:'arc-row' },
             h('div', { style:{fontSize:22,flexShrink:0} }, m?.emoji),
             h('div', { style:{flex:1,minWidth:0} },
               h('div', { style:{fontSize:14,lineHeight:1.5,color:'#555'} }, n.text),
               h('div', { style:{fontSize:11,color:'#BBB',marginTop:3} }, m?.name+' · '+fmtTime(n.ts)),
             ),
-            h('button', { style:{color:'#DDD',fontSize:13,padding:'2px 5px',flexShrink:0},
-              title:'未読に戻す',
+            h('button', { style:{color:'#DDD',fontSize:13,padding:'2px 5px',flexShrink:0}, title:'未読に戻す',
               onClick:()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,archived:false}:x)) }, '↩'),
             h('button', { style:{color:'#DDD',fontSize:15,padding:'2px 4px',flexShrink:0},
               onClick:()=>setNotes(p=>p.filter(x=>x.id!==n.id)) }, '✕'),
