@@ -153,6 +153,31 @@ a{color:inherit}
 .box-green{background:#E8F5E9;border:1.5px solid #A5D6A7;color:#1B5E20}
 .box-red{background:#FFEBEE;border:1.5px solid #FFCDD2;color:#B71C1C}
 .box-blue{background:#E3F2FD;border:1.5px solid #90CAF9;color:#0D47A1}
+/* ── Board (swipe) ───────────────────────────────────────────────────────── */
+.board-wrap{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 16px;gap:12px}
+.board-stack{position:relative;width:100%;height:340px;margin-bottom:4px}
+.board-card{position:absolute;inset:0;background:#fff;border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.13);padding:24px 22px 18px;display:flex;flex-direction:column;touch-action:pan-y;cursor:grab;user-select:none;will-change:transform}
+.board-card:active{cursor:grabbing}
+.board-who{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.board-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.board-name{font-size:13px;font-weight:800}
+.board-time{font-size:11px;color:#BBB;margin-left:auto}
+.board-body{font-size:17px;font-weight:500;line-height:1.65;flex:1;overflow:hidden;word-break:break-word}
+.board-hint{display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-weight:700}
+.hint-left{color:#A0B4FF}
+.hint-right{color:#FF8AAE}
+.swipe-label{position:absolute;top:22px;padding:5px 14px;border-radius:20px;font-size:15px;font-weight:800;opacity:0;transition:opacity .1s;pointer-events:none;z-index:10}
+.swipe-label.keep{left:18px;background:#E8F0FF;color:#3B5BDB}
+.swipe-label.done{right:18px;background:#FFF0F5;color:#FF5E8A}
+.board-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;color:#CCC;font-size:14px;gap:8px}
+.board-empty-ico{font-size:48px}
+.board-count{display:flex;gap:6px;justify-content:center;margin-bottom:2px}
+.board-pip{width:7px;height:7px;border-radius:50%;background:#E0E0E0;transition:background .2s}
+.board-pip.on{background:#FF5E8A}
+.board-archived{margin-top:4px;width:100%}
+.arc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #F2F2F2;opacity:.6}
+.arc-row:last-child{border-bottom:none}
+.board-post-card{background:#fff;border-radius:18px;padding:14px;margin-bottom:0;box-shadow:0 2px 12px rgba(0,0,0,.055);width:100%}
 
 /* Setup screen */
 .setup-bg{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;background:linear-gradient(160deg,#FFF5F8 0%,#F0EFFE 100%);padding:30px 20px 40px;overflow-y:auto}
@@ -223,6 +248,7 @@ const vB = b => b&&typeof b.id==='string'&&typeof b.amount==='number'&&b.amount>
 const vS = i => i&&typeof i.id==='string'&&typeof i.text==='string';
 const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
 const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
+const vN = n => n && typeof n.id==='string' && typeof n.text==='string' && n.text.length>0;
 
 // ── Config persistence ────────────────────────────────────────────────────────
 const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
@@ -461,6 +487,7 @@ function MainApp({ db, onReset }) {
   const [budget,   setBudget]   = useState([]);
   const [shopping, setShopping] = useState([]);
   const [shopCats, setShopCats] = useState(DEF_CATS);
+  const [notes,    setNotes]    = useState([]);
 
   // Track writes to avoid echo
   const writing = useRef({});
@@ -486,6 +513,7 @@ function MainApp({ db, onReset }) {
     listen('budget',   setBudget,   vB, []);
     listen('shopping', setShopping, vS, []);
     listen('shopCats', setShopCats, vC, DEF_CATS);
+    listen('notes',    setNotes,    vN, []);
     return () => unsubs.forEach(u => u());
   }, [db]);
 
@@ -506,11 +534,13 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('budget',   budget);   }, [budget]);
   useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
   useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
+  useEffect(() => { if (synced) writeDb('notes',    notes);    }, [notes]);
 
   const TABS = [
     { k:'shop',   label:'🛒 買い物' },
     { k:'cal',    label:'📅 予定' },
     { k:'budget', label:'💰 家計' },
+    { k:'board',  label:'📝 掲示板' },
     { k:'cfg',    label:'⚙️' },
   ];
 
@@ -537,6 +567,7 @@ function MainApp({ db, onReset }) {
       tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
       tab==='cal'    && h(CalTab,    { events, setEvents, members }),
       tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
+      tab==='board'  && h(BoardTab,  { notes, setNotes, members }),
       tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
     ),
   );
@@ -860,6 +891,208 @@ function BudgetTab({ budget, setBudget, members }) {
           h('button',{className:'del',onClick:()=>del(b.id)},'✕'),
         );
       })
+    ),
+  );
+}
+
+
+// ═══════════════════════ BOARD (SWIPE) ═══════════════════════════════════════
+function BoardTab({ notes, setNotes, members }) {
+  const [text,   setText]   = useState('');
+  const [memId,  setMemId]  = useState(members[0]?.id ?? '');
+  const [showArc,setShowArc]= useState(false);
+  const [showPost,setShowPost]=useState(false);
+  const txtRef = useRef(null);
+
+  useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
+
+  // Only unread (not archived) in the stack, newest first
+  const stack   = [...notes].filter(n => !n.archived).sort((a,b) => b.ts - a.ts);
+  const archived= [...notes].filter(n =>  n.archived).sort((a,b) => b.ts - a.ts);
+  const top     = stack[0] ?? null;
+
+  const post = () => {
+    const t = clean(text, 200);
+    if (!t || notes.length >= 300) return;
+    setNotes(p => [...p, { id:uid(), text:t, memberId:memId, ts:Date.now(), archived:false }]);
+    setText(''); setShowPost(false);
+  };
+
+  // ── Swipe logic ─────────────────────────────────────────────────────────────
+  const cardRef  = useRef(null);
+  const dragState= useRef(null);
+  const labelKeepRef = useRef(null);
+  const labelDoneRef = useRef(null);
+
+  const archiveTop = (archive) => {
+    if (!top) return;
+    setNotes(p => p.map(n => n.id===top.id ? {...n, archived: archive} : n));
+  };
+
+  const onStart = (clientX, clientY) => {
+    dragState.current = { startX:clientX, startY:clientY, dx:0 };
+  };
+  const onMove = (clientX) => {
+    if (!dragState.current || !cardRef.current) return;
+    const dx = clientX - dragState.current.startX;
+    dragState.current.dx = dx;
+    const rot = dx * 0.06;
+    const scale = 1 - Math.abs(dx) * 0.0003;
+    cardRef.current.style.transform = `translateX(${dx}px) rotate(${rot}deg) scale(${scale})`;
+    // Labels
+    const pct = Math.min(Math.abs(dx) / 80, 1);
+    if (labelKeepRef.current) labelKeepRef.current.style.opacity = dx < -18 ? pct : 0;
+    if (labelDoneRef.current) labelDoneRef.current.style.opacity = dx >  18 ? pct : 0;
+  };
+  const onEnd = () => {
+    if (!dragState.current || !cardRef.current) return;
+    const dx = dragState.current.dx;
+    dragState.current = null;
+    if (labelKeepRef.current) labelKeepRef.current.style.opacity = 0;
+    if (labelDoneRef.current) labelDoneRef.current.style.opacity = 0;
+    if (Math.abs(dx) > 80) {
+      // Fly off screen
+      const dir = dx > 0 ? 1 : -1;
+      cardRef.current.style.transition = 'transform .32s ease, opacity .32s';
+      cardRef.current.style.transform  = `translateX(${dir*420}px) rotate(${dir*18}deg)`;
+      cardRef.current.style.opacity    = '0';
+      setTimeout(() => {
+        archiveTop(dx > 0); // right=archived(done), left=keep unread
+        if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; cardRef.current.style.opacity=''; }
+      }, 320);
+    } else {
+      // Snap back
+      cardRef.current.style.transition = 'transform .28s cubic-bezier(.25,1.4,.5,1)';
+      cardRef.current.style.transform  = '';
+      setTimeout(() => { if(cardRef.current) cardRef.current.style.transition=''; }, 300);
+    }
+  };
+
+  // Touch handlers
+  const onTouchStart = e => onStart(e.touches[0].clientX, e.touches[0].clientY);
+  const onTouchMove  = e => { e.preventDefault(); onMove(e.touches[0].clientX); };
+  const onTouchEnd   = () => onEnd();
+  // Mouse handlers (desktop)
+  const onMouseDown  = e => { onStart(e.clientX, e.clientY);
+    const mv = e2 => onMove(e2.clientX);
+    const up = ()  => { onEnd(); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); };
+    window.addEventListener('mousemove', mv);
+    window.addEventListener('mouseup',   up);
+  };
+
+  const fmtTime = ts => {
+    const d = new Date(ts), now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60)   return 'たった今';
+    if (diff < 3600) return Math.floor(diff/60)+'分前';
+    if (diff < 86400)return Math.floor(diff/3600)+'時間前';
+    return d.getMonth()+1+'/'+d.getDate();
+  };
+
+  return h(Fragment, null,
+    // Post button + unread count
+    h('div', { style:{display:'flex',alignItems:'center',gap:10,marginBottom:14} },
+      h('div', { style:{flex:1,fontSize:13,color:'#AAA',fontWeight:700} },
+        stack.length > 0 ? '未読 '+stack.length+'件' : 'すべて読みました！'
+      ),
+      h('button', {
+        style:{padding:'9px 18px',background:'linear-gradient(135deg,#FF8050,#FF5E8A)',color:'#fff',borderRadius:14,fontSize:14,fontWeight:800,boxShadow:'0 3px 12px rgba(255,94,138,.3)'},
+        onClick:()=>setShowPost(p=>!p)
+      }, showPost ? '✕ 閉じる' : '✏️ 投稿する'),
+    ),
+
+    // Post form
+    showPost && h('div', { className:'board-post-card fi', style:{marginBottom:12} },
+      h('textarea', { className:'field', style:{minHeight:90,resize:'none',marginBottom:10}, placeholder:'家族へのメッセージを書いてください…', maxLength:200, value:text, ref:txtRef,
+        onChange:e=>setText(e.target.value) }),
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 投稿者'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
+            onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
+        ),
+      ),
+      h('button', { className:'btn btn-grad', style:{boxShadow:'none'}, onClick:post, disabled:!text.trim() }, '投稿する'),
+    ),
+
+    // Card stack
+    h('div', { className:'board-stack' },
+      // Background cards (peek effect)
+      stack.length > 2 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(12px) scale(.88)',boxShadow:'0 4px 16px rgba(0,0,0,.08)'} }),
+      stack.length > 1 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(6px) scale(.94)',boxShadow:'0 4px 20px rgba(0,0,0,.10)'} }),
+
+      top ? h('div', {
+        ref: cardRef,
+        className: 'board-card',
+        onTouchStart, onTouchMove, onTouchEnd,
+        onMouseDown,
+      },
+        h('span', { ref:labelKeepRef, className:'swipe-label keep' }, '← あとで'),
+        h('span', { ref:labelDoneRef, className:'swipe-label done' }, '既読 →'),
+
+        // Author
+        h('div', { className:'board-who' },
+          h('div', { className:'board-avatar', style:{background:(members.find(m=>m.id===top.memberId)?.color??'#ccc')+'22'} },
+            members.find(m=>m.id===top.memberId)?.emoji ?? '👤'),
+          h('div', null,
+            h('div', { className:'board-name' }, members.find(m=>m.id===top.memberId)?.name ?? ''),
+          ),
+          h('div', { className:'board-time' }, fmtTime(top.ts)),
+        ),
+
+        // Body
+        h('div', { className:'board-body' }, top.text),
+
+        // Hint
+        h('div', { className:'board-hint' },
+          h('span', { className:'hint-left' }, '← あとで'),
+          h('span', { className:'hint-right' }, '既読 →'),
+        ),
+      )
+      : h('div', { className:'board-empty' },
+          h('div', { className:'board-empty-ico' }, stack.length===0 && notes.length>0 ? '🎉' : '📭'),
+          stack.length===0 && notes.length>0 ? 'すべて読みました！' : '新しいメッセージはありません',
+        ),
+    ),
+
+    // Pips
+    stack.length > 0 && h('div', { className:'board-count' },
+      Array(Math.min(stack.length, 5)).fill(null).map((_,i) =>
+        h('div', { key:i, className:'board-pip'+(i===0?' on':'') })
+      )
+    ),
+
+    // Swipe buttons (for those who prefer tapping)
+    top && h('div', { style:{display:'flex',gap:10,width:'100%',marginTop:8} },
+      h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#E8F0FF',color:'#3B5BDB',fontSize:14,fontWeight:800,border:'none'},
+        onClick:()=>archiveTop(false) }, '← あとで'),
+      h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#FFF0F5',color:'#FF5E8A',fontSize:14,fontWeight:800,border:'none'},
+        onClick:()=>archiveTop(true)  }, '既読 →'),
+    ),
+
+    // Archived section
+    archived.length > 0 && h(Fragment, null,
+      h('button', { className:'btn btn-ghost', style:{marginTop:16,width:'100%'}, onClick:()=>setShowArc(p=>!p) },
+        showArc ? '▲ 既読を隠す' : `▼ 既読を見る（${archived.length}件）`),
+      showArc && h('div', { className:'board-archived card fi' },
+        h('div', { className:'card-label' }, '既読メッセージ'),
+        archived.map(n => {
+          const m = members.find(x=>x.id===n.memberId)??members[0];
+          return h('div', { key:n.id, className:'arc-row' },
+            h('div', { style:{fontSize:22,flexShrink:0} }, m?.emoji),
+            h('div', { style:{flex:1,minWidth:0} },
+              h('div', { style:{fontSize:14,lineHeight:1.5,color:'#555'} }, n.text),
+              h('div', { style:{fontSize:11,color:'#BBB',marginTop:3} }, m?.name+' · '+fmtTime(n.ts)),
+            ),
+            h('button', { style:{color:'#DDD',fontSize:13,padding:'2px 5px',flexShrink:0},
+              title:'未読に戻す',
+              onClick:()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,archived:false}:x)) }, '↩'),
+            h('button', { style:{color:'#DDD',fontSize:15,padding:'2px 4px',flexShrink:0},
+              onClick:()=>setNotes(p=>p.filter(x=>x.id!==n.id)) }, '✕'),
+          );
+        })
+      ),
     ),
   );
 }
