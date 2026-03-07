@@ -241,7 +241,7 @@ const cleanAmt = v => { const n=parseFloat(v); return Number.isFinite(n)&&n>=0&&
 const cleanDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
 const cleanTime = t => /^\d{2}:\d{2}$/.test(t) ? t : '';
 const uid = () => crypto.randomUUID();
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const vM = m => m&&typeof m.id==='string'&&typeof m.name==='string'&&m.name.length>0;
 const vE = e => e&&typeof e.id==='string'&&typeof e.title==='string';
 const vB = b => b&&typeof b.id==='string'&&typeof b.amount==='number'&&b.amount>=0;
@@ -906,14 +906,34 @@ function BudgetTab({ budget, setBudget, members }) {
 
   const del = id => setBudget(p => p.filter(b => b.id !== id));
 
+  // ── ローカル日付でYYYY-MM取得（タイムゾーンバグ修正）────────────────────────
+  const localYM = (y, m) => `${y}-${String(m+1).padStart(2,'0')}`;
+
   // Month navigation
   const viewDate = new Date(now.getFullYear(), now.getMonth() + moOffset, 1);
-  const viewM    = viewDate.toISOString().slice(0, 7);
+  const viewM    = localYM(viewDate.getFullYear(), viewDate.getMonth());
   const moLabel  = `${viewDate.getFullYear()}年${viewDate.getMonth()+1}月`;
+
+  // 前月
+  const prevDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+  const prevM    = localYM(prevDate.getFullYear(), prevDate.getMonth());
+
   const monthly  = budget.filter(b => b.date.startsWith(viewM));
+  const prevMon  = budget.filter(b => b.date.startsWith(prevM));
+
   const totExp   = monthly.filter(b => b.type==='expense').reduce((s,b) => s+b.amount, 0);
   const totInc   = monthly.filter(b => b.type==='income').reduce((s,b) => s+b.amount, 0);
   const bal      = totInc - totExp;
+  const prevExp  = prevMon.filter(b => b.type==='expense').reduce((s,b) => s+b.amount, 0);
+  const prevInc  = prevMon.filter(b => b.type==='income').reduce((s,b) => s+b.amount, 0);
+  const diffExp  = totExp - prevExp;  // + なら増加
+  const diffInc  = totInc - prevInc;
+
+  // メンバー別支出
+  const memberExp = members.map(m => ({
+    ...m,
+    val: monthly.filter(b => b.type==='expense' && b.memberId===m.id).reduce((s,b) => s+b.amount, 0),
+  })).filter(m => m.val > 0);
 
   // Donut data
   const donutData = BCATS.map(cat => ({
@@ -927,7 +947,8 @@ function BudgetTab({ budget, setBudget, members }) {
     .filter(b => b.date.startsWith(viewM))
     .sort((a,b) => b.date.localeCompare(a.date));
 
-  const fmt = v => '¥' + v.toLocaleString();
+  const fmt     = v => '¥' + v.toLocaleString();
+  const fmtDiff = v => (v > 0 ? '▲' : v < 0 ? '▼' : '－') + '¥' + Math.abs(v).toLocaleString();
 
   return h(Fragment, null,
 
@@ -939,18 +960,43 @@ function BudgetTab({ budget, setBudget, members }) {
     ),
 
     // ── Summary cards ────────────────────────────────────────────────────────
-    h('div', { className:'sum-grid', style:{marginBottom:12} },
+    h('div', { className:'sum-grid', style:{marginBottom:8} },
       [
-        {label:'収入', val:totInc, color:'#4CAF50', icon:'📈'},
-        {label:'支出', val:totExp, color:'#FF5E8A', icon:'📉'},
-        {label:'収支', val:bal,    color:bal>=0?'#4CAF50':'#FF5E8A', icon:'💹'},
+        {label:'収入', val:totInc, color:'#4CAF50', icon:'📈', diff:diffInc, diffGood: diffInc>=0},
+        {label:'支出', val:totExp, color:'#FF5E8A', icon:'📉', diff:diffExp, diffGood: diffExp<=0},
+        {label:'収支', val:bal,    color:bal>=0?'#4CAF50':'#FF5E8A', icon:'💹', diff:null},
       ].map(s => h('div', { key:s.label, className:'sum-card' },
         h('div', { style:{fontSize:22,marginBottom:2} }, s.icon),
         h('div', { style:{fontSize:10,color:'#AAA',fontWeight:700,marginBottom:2} }, s.label),
         h('div', { style:{fontSize:13,fontWeight:800,color:s.color} },
           (s.val < 0 ? '-' : '') + fmt(Math.abs(s.val))
         ),
+        s.diff !== null && prevExp > 0 && h('div', {
+          style:{fontSize:9,fontWeight:800,marginTop:2,
+            color: s.diffGood ? '#4CAF50' : '#FF5E8A'}
+        }, fmtDiff(s.diff) + ' 前月比'),
       ))
+    ),
+
+    // ── メンバー別支出 ─────────────────────────────────────────────────────────
+    memberExp.length > 1 && h('div', { className:'card', style:{marginBottom:12, padding:'12px 14px'} },
+      h('div', { className:'card-label' }, '👤 メンバー別支出'),
+      h('div', { style:{display:'flex',gap:8,flexWrap:'wrap'} },
+        memberExp.sort((a,b)=>b.val-a.val).map(m =>
+          h('div', { key:m.id, style:{
+            flex:'1 1 auto', minWidth:80,
+            background: m.color+'14', borderRadius:14,
+            padding:'10px 12px', textAlign:'center',
+            border:`2px solid ${m.color}33`,
+          }},
+            h('div', { style:{fontSize:22} }, m.emoji),
+            h('div', { style:{fontSize:11,fontWeight:800,color:m.color,marginTop:2} }, m.name),
+            h('div', { style:{fontSize:13,fontWeight:800,color:'#333',marginTop:2} }, fmt(m.val)),
+            h('div', { style:{fontSize:10,color:'#AAA'} },
+              totExp > 0 ? (m.val/totExp*100).toFixed(0)+'%' : ''),
+          )
+        )
+      ),
     ),
 
     // ── Donut chart ──────────────────────────────────────────────────────────
