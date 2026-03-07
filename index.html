@@ -890,21 +890,17 @@ function BudgetTab({ budget, setBudget, members }) {
   useEffect(() => { if (!form.memberId && members[0]) sf('memberId')(members[0].id); }, [members]);
 
   const add = () => {
-    const title = clean(form.title);
-    // Fix: parse amount robustly
-    const rawAmt = String(form.amount).replace(/[^0-9.]/g, '');
-    const amount = parseFloat(rawAmt);
-    if (!title || !amount || amount <= 0 || amount > LIM.amount) return;
-    if (budget.length >= LIM.budget) return;
-    const cat = BCATS.includes(form.category) ? form.category : 'その他';
-    const type = form.type === 'income' ? 'income' : 'expense';
-    setBudget(p => [...p, {
-      id: uid(), title, amount, category: cat,
-      memberId: form.memberId,
-      date: cleanDate(form.date) || today(),
-      type,
-    }]);
-    setForm({ title:'', amount:'', category: form.category, memberId: form.memberId, date: today(), type: form.type });
+    const title = (form.title || '').trim();
+    if (!title) { alert('内容を入力してください'); return; }
+    const rawAmt = String(form.amount).replace(/[^0-9]/g, '');
+    const amount = parseInt(rawAmt, 10);
+    if (!amount || amount <= 0) { alert('金額を入力してください'); return; }
+    const cat      = BCATS.includes(form.category) ? form.category : 'その他';
+    const type     = form.type === 'income' ? 'income' : 'expense';
+    const memberId = form.memberId || members[0]?.id || '';
+    const date     = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? form.date : today();
+    setBudget(p => [...p, { id:uid(), title, amount, category:cat, memberId, date, type }]);
+    setForm(f => ({ ...f, title:'', amount:'', date:today() }));
     setShow(false);
   };
 
@@ -1040,9 +1036,7 @@ function BudgetTab({ budget, setBudget, members }) {
           }, m.emoji+' '+m.name))
         ),
       ),
-      h('button', { className:'btn btn-grad', onClick:add,
-        disabled: !form.title.trim() || !form.amount,
-      }, '追加する'),
+      h('button', { className:'btn btn-grad', onClick:add }, '追加する'),
     ),
 
     // ── Filter ───────────────────────────────────────────────────────────────
