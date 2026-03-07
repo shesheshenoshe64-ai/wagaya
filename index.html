@@ -238,7 +238,10 @@ import { useState, useEffect, useRef, useCallback, createElement as h, Fragment 
 import { createRoot } from 'https://esm.sh/react-dom@18/client';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const LS_CFG = 'wagaya_firebase_cfg_v1';
+const LS_CFG    = 'wagaya_firebase_cfg_v1';
+const LS_AI_KEY = 'wagaya_ai_key_v1';
+const loadAiKey = () => { try { return localStorage.getItem(LS_AI_KEY)||'' } catch { return '' } };
+const saveAiKey = k => { try { localStorage.setItem(LS_AI_KEY, k) } catch {} };
 const DB_PATH = 'wagaya/v1';
 const LIM = { text:100, note:200, amount:9999999, cats:30, items:300, events:500, budget:500, members:8 };
 
@@ -1067,29 +1070,42 @@ function DayCard({ label, dateStr, isToday, color, meal, isOpen, onToggle, onSav
   const fetchAiIngs = async () => {
     const name = dish.trim();
     if (!name) return;
+    const apiKey = loadAiKey();
+    if (!apiKey) {
+      setAiError('⚙️ APIキーが未設定です。「設定」タブからAnthropicのAPIキーを登録してください。');
+      return;
+    }
     setAiLoading(true); setAiError(''); setSuggested([]);
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 300,
           system: 'あなたは日本の家庭料理の専門家です。料理名を受け取り、一般的な材料リストをJSON配列で返してください。形式: ["材料1","材料2",...] のみ。説明不要。材料は短く（例:「鶏もも肉」「玉ねぎ」「醤油」）、8〜12品程度。',
           messages: [{ role: 'user', content: name }]
         })
       });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err?.error?.message ?? 'APIエラー ('+res.status+')');
+      }
       const data = await res.json();
       const text = data.content?.[0]?.text ?? '';
       const match = text.match(/\[[\s\S]*\]/);
       if (!match) throw new Error('parse error');
       const arr = JSON.parse(match[0]);
       if (!Array.isArray(arr)) throw new Error('not array');
-      // Filter out items already in ings
       const filtered = arr.map(s=>String(s).trim()).filter(s=>s&&!ings.includes(s)).slice(0,15);
       setSuggested(filtered);
     } catch(e) {
-      setAiError('材料の取得に失敗しました。もう一度お試しください。');
+      setAiError('取得に失敗しました: ' + e.message);
     }
     setAiLoading(false);
   };
@@ -1435,6 +1451,10 @@ function CfgTab({ members, setMembers, onReset }) {
   const [newName, setNewName] = useState('');
   const [newEmoji,setNewEmoji]= useState(EMOJIS[0]);
   const [newClr,  setNewClr]  = useState(PAL[0]);
+  const [aiKey,   setAiKey]   = useState(loadAiKey);
+  const [aiSaved, setAiSaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
   const addM = () => {
     const name=clean(newName,20);
     if(!name||members.length>=LIM.members)return;
@@ -1442,6 +1462,12 @@ function CfgTab({ members, setMembers, onReset }) {
     setNewName('');setShowAdd(false);
   };
   const delM = id => { if(members.length<=1)return; setMembers(p=>p.filter(m=>m.id!==id)); };
+
+  const handleSaveKey = () => {
+    saveAiKey(aiKey.trim());
+    setAiSaved(true);
+    setTimeout(()=>setAiSaved(false), 2000);
+  };
 
   return h(Fragment, null,
     h('div',{className:'box box-green'},
@@ -1468,6 +1494,43 @@ function CfgTab({ members, setMembers, onReset }) {
         ),
       ),
     ),
+
+    // ── AI設定 ────────────────────────────────────────────────────────────────
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'✨ AI材料推測（献立タブ）'),
+      h('div',{className:'box box-blue',style:{marginBottom:12}},
+        h('strong',null,'Anthropic APIキーが必要です'),
+        h('a',{href:'https://console.anthropic.com/settings/keys',target:'_blank',
+          style:{display:'inline-flex',alignItems:'center',gap:4,color:'#0D47A1',fontWeight:700,marginTop:4}},
+          '🔗 APIキーを取得する（console.anthropic.com）')
+      ),
+      h('div',{style:{position:'relative',marginBottom:8}},
+        h('input',{
+          className:'field field-mono',
+          style:{marginBottom:0,paddingRight:44},
+          type:showKey?'text':'password',
+          placeholder:'sk-ant-api03-…',
+          value:aiKey,
+          onChange:e=>setAiKey(e.target.value),
+          onKeyDown:e=>e.key==='Enter'&&handleSaveKey(),
+        }),
+        h('button',{
+          style:{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',
+                 fontSize:16,color:'#BBB',padding:'2px 4px'},
+          onClick:()=>setShowKey(p=>!p)
+        }, showKey?'🙈':'👁'),
+      ),
+      h('button',{
+        className:'btn btn-purple',
+        style:{boxShadow:'none', background:aiKey.trim()?undefined:'#DDD', color:aiKey.trim()?'#fff':'#AAA'},
+        disabled:!aiKey.trim(),
+        onClick:handleSaveKey,
+      }, aiSaved ? '✅ 保存しました！' : '💾 APIキーを保存'),
+      loadAiKey() && h('p',{style:{fontSize:11,color:'#AAA',marginTop:8,lineHeight:1.6}},
+        '⚠️ APIキーはこのデバイスのみに保存されます。家族それぞれのスマホで設定が必要です。'
+      ),
+    ),
+
     h('div',{className:'card'},
       h('div',{className:'card-label'},'Firebase設定'),
       h('p',{style:{fontSize:13,color:'#888',marginBottom:12,lineHeight:1.7}},'Firebase設定をリセットして再設定画面に戻ります。データはFirebase上に残ります。'),
