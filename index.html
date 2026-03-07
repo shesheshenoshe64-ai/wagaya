@@ -830,67 +830,254 @@ function EvRow({ ev, members, onDel, compact }) {
 }
 
 // ═══════════════════════ BUDGET ══════════════════════════════════════════════
-function BudgetTab({ budget, setBudget, members }) {
-  const[show,setShow]=useState(false);
-  const[filter,setFilter]=useState('all');
-  const[form,setForm]=useState({title:'',amount:'',category:'食費',memberId:members[0]?.id??'',date:today(),type:'expense'});
-  const sf=k=>v=>setForm(p=>({...p,[k]:v}));
-  const add=()=>{
-    const title=clean(form.title),amount=cleanAmt(form.amount);
-    if(!title||amount<=0||budget.length>=LIM.budget)return;
-    setBudget(p=>[...p,{id:uid(),title,amount,category:BCATS.includes(form.category)?form.category:'その他',memberId:form.memberId,date:cleanDate(form.date)||today(),type:form.type==='income'?'income':'expense'}]);
-    setForm({title:'',amount:'',category:'食費',memberId:members[0]?.id??'',date:today(),type:'expense'});setShow(false);
-  };
-  const del=id=>setBudget(p=>p.filter(b=>b.id!==id));
-  const thisM=new Date().toISOString().slice(0,7);
-  const monthly=budget.filter(b=>b.date.startsWith(thisM));
-  const totExp=monthly.filter(b=>b.type==='expense').reduce((s,b)=>s+b.amount,0);
-  const totInc=monthly.filter(b=>b.type==='income').reduce((s,b)=>s+b.amount,0);
-  const bal=totInc-totExp;
-  const visible=filter==='all'?budget:budget.filter(b=>b.type===filter);
+const BCAT_ICONS = {食費:'🍽',日用品:'🧴',交通費:'🚃',娯楽:'🎮',医療:'💊',教育:'📚',その他:'📦'};
 
-  return h(Fragment,null,
-    h('div',{className:'sum-grid'},
-      [{label:'今月の収入',val:totInc,color:'#4CAF50',icon:'📈'},{label:'今月の支出',val:totExp,color:'#FF5E8A',icon:'📉'},{label:'収支',val:bal,color:bal>=0?'#4CAF50':'#FF5E8A',icon:'💹'}]
-      .map(s=>h('div',{key:s.label,className:'sum-card'},h('div',{style:{fontSize:22,marginBottom:3}},s.icon),h('div',{style:{fontSize:10,color:'#AAA',fontWeight:700,marginBottom:2}},s.label),h('div',{style:{fontSize:14,fontWeight:800,color:s.color}},(s.val<0?'-':'')+'¥'+Math.abs(s.val).toLocaleString())))
+function DonutChart({ data, total, selected, onSelect }) {
+  // data: [{cat, val, color}]
+  const size = 200, cx = 100, cy = 100, r = 72, inner = 44;
+  let angle = -Math.PI / 2;
+  const slices = data.map(d => {
+    const start = angle;
+    const sweep = (d.val / total) * 2 * Math.PI;
+    angle += sweep;
+    const end = angle;
+    const large = sweep > Math.PI ? 1 : 0;
+    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end),   y2 = cy + r * Math.sin(end);
+    const ix1 = cx + inner * Math.cos(start), iy1 = cy + inner * Math.sin(start);
+    const ix2 = cx + inner * Math.cos(end),   iy2 = cy + inner * Math.sin(end);
+    const path = `M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z`;
+    return { ...d, path, midAngle: start + sweep / 2 };
+  });
+  const selData = selected ? data.find(d => d.cat === selected) : null;
+
+  return h('svg', { viewBox:`0 0 ${size} ${size}`, style:{width:'100%',maxWidth:220,display:'block',margin:'0 auto',cursor:'pointer'} },
+    slices.map(s => {
+      const isSelected = selected === s.cat;
+      const scale = isSelected ? 1.06 : 1;
+      return h('path', {
+        key: s.cat, d: s.path,
+        fill: s.color,
+        opacity: selected && !isSelected ? 0.45 : 1,
+        transform: `translate(${cx},${cy}) scale(${scale}) translate(${-cx},${-cy})`,
+        style: { transition: 'all .2s', filter: isSelected ? 'drop-shadow(0 3px 8px rgba(0,0,0,.18))' : 'none' },
+        onClick: () => onSelect(selected === s.cat ? null : s.cat),
+      });
+    }),
+    // Center text
+    h('text', { x: cx, y: cy - 8, textAnchor:'middle', style:{fontSize:11,fill:'#AAA',fontWeight:700} },
+      selData ? selData.cat : '支出合計'),
+    h('text', { x: cx, y: cy + 12, textAnchor:'middle', style:{fontSize:15,fill:'#333',fontWeight:800} },
+      '¥' + (selData ? selData.val : total).toLocaleString()),
+    selData && h('text', { x: cx, y: cy + 28, textAnchor:'middle', style:{fontSize:11,fill:selData.color,fontWeight:700} },
+      (selData.val/total*100).toFixed(0) + '%'),
+  );
+}
+
+function BudgetTab({ budget, setBudget, members }) {
+  const now = new Date();
+  const [moOffset, setMoOffset] = useState(0);
+  const [show,   setShow]   = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [selCat, setSelCat] = useState(null);
+  const [form,   setForm]   = useState({
+    title:'', amount:'', category:'食費',
+    memberId: members[0]?.id ?? '',
+    date: today(), type: 'expense',
+  });
+  const sf = k => v => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => { if (!form.memberId && members[0]) sf('memberId')(members[0].id); }, [members]);
+
+  const add = () => {
+    const title = clean(form.title);
+    // Fix: parse amount robustly
+    const rawAmt = String(form.amount).replace(/[^0-9.]/g, '');
+    const amount = parseFloat(rawAmt);
+    if (!title || !amount || amount <= 0 || amount > LIM.amount) return;
+    if (budget.length >= LIM.budget) return;
+    const cat = BCATS.includes(form.category) ? form.category : 'その他';
+    const type = form.type === 'income' ? 'income' : 'expense';
+    setBudget(p => [...p, {
+      id: uid(), title, amount, category: cat,
+      memberId: form.memberId,
+      date: cleanDate(form.date) || today(),
+      type,
+    }]);
+    setForm({ title:'', amount:'', category: form.category, memberId: form.memberId, date: today(), type: form.type });
+    setShow(false);
+  };
+
+  const del = id => setBudget(p => p.filter(b => b.id !== id));
+
+  // Month navigation
+  const viewDate = new Date(now.getFullYear(), now.getMonth() + moOffset, 1);
+  const viewM    = viewDate.toISOString().slice(0, 7);
+  const moLabel  = `${viewDate.getFullYear()}年${viewDate.getMonth()+1}月`;
+  const monthly  = budget.filter(b => b.date.startsWith(viewM));
+  const totExp   = monthly.filter(b => b.type==='expense').reduce((s,b) => s+b.amount, 0);
+  const totInc   = monthly.filter(b => b.type==='income').reduce((s,b) => s+b.amount, 0);
+  const bal      = totInc - totExp;
+
+  // Donut data
+  const donutData = BCATS.map(cat => ({
+    cat, color: BCLR[cat],
+    val: monthly.filter(b => b.type==='expense' && b.category===cat).reduce((s,b) => s+b.amount, 0),
+  })).filter(d => d.val > 0);
+
+  // List
+  const listItems = [...budget]
+    .filter(b => filter==='all' ? true : b.type===filter)
+    .filter(b => b.date.startsWith(viewM))
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  const fmt = v => '¥' + v.toLocaleString();
+
+  return h(Fragment, null,
+
+    // ── Month nav ────────────────────────────────────────────────────────────
+    h('div', { style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12} },
+      h('button', { className:'cal-arr', onClick:()=>setMoOffset(o=>o-1) }, '‹'),
+      h('div', { style:{fontWeight:800,fontSize:17} }, moLabel),
+      h('button', { className:'cal-arr', onClick:()=>setMoOffset(o=>o+1), style:{opacity:moOffset>=0?.35:1} }, '›'),
     ),
-    totExp>0&&h('div',{className:'card'},h('div',{className:'card-label'},'今月のカテゴリ別支出'),
-      BCATS.map(cat=>{
-        const tot=monthly.filter(b=>b.type==='expense'&&b.category===cat).reduce((s,b)=>s+b.amount,0);
-        if(!tot)return null;
-        const pct=totExp>0?tot/totExp*100:0;
-        return h('div',{key:cat,className:'bar-row'},
-          h('div',{className:'bar-lbl'},h('span',{style:{fontWeight:700,color:BCLR[cat]}},cat),h('span',{style:{color:'#555'}},'¥'+tot.toLocaleString()+' ('+pct.toFixed(0)+'%)')),
-          h('div',{className:'bar-track'},h('div',{className:'bar-fill',style:{width:pct+'%',background:BCLR[cat]}})),
-        );
-      })
+
+    // ── Summary cards ────────────────────────────────────────────────────────
+    h('div', { className:'sum-grid', style:{marginBottom:12} },
+      [
+        {label:'収入', val:totInc, color:'#4CAF50', icon:'📈'},
+        {label:'支出', val:totExp, color:'#FF5E8A', icon:'📉'},
+        {label:'収支', val:bal,    color:bal>=0?'#4CAF50':'#FF5E8A', icon:'💹'},
+      ].map(s => h('div', { key:s.label, className:'sum-card' },
+        h('div', { style:{fontSize:22,marginBottom:2} }, s.icon),
+        h('div', { style:{fontSize:10,color:'#AAA',fontWeight:700,marginBottom:2} }, s.label),
+        h('div', { style:{fontSize:13,fontWeight:800,color:s.color} },
+          (s.val < 0 ? '-' : '') + fmt(Math.abs(s.val))
+        ),
+      ))
     ),
-    h('button',{className:'btn btn-purple',style:{marginBottom:12},onClick:()=>setShow(p=>!p)},show?'✕ 閉じる':'＋ 収支を記録する'),
-    show&&h('div',{className:'card fi'},
-      h('div',{className:'card-label'},'収支を記録'),
-      h('div',{className:'type-row'},[{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t=>h('button',{key:t.k,className:'type-btn'+(form.type===t.k?' on':''),onClick:()=>sf('type')(t.k)},t.label))),
-      h('input',{className:'field',placeholder:'内容',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
-      h('input',{className:'field',type:'number',placeholder:'金額',min:0,max:LIM.amount,value:form.amount,onChange:e=>sf('amount')(e.target.value)}),
-      h('select',{className:'field',value:form.category,onChange:e=>sf('category')(e.target.value)},BCATS.map(c=>h('option',{key:c},c))),
-      h('input',{className:'field',type:'date',value:form.date,onChange:e=>sf('date')(e.target.value)}),
-      h('div',{style:{marginBottom:10}},
-        h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'👤 誰が？'),
-        h('div',{className:'chips'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},onClick:()=>sf('memberId')(m.id)},m.emoji+' '+m.name))),
+
+    // ── Donut chart ──────────────────────────────────────────────────────────
+    totExp > 0 && h('div', { className:'card', style:{marginBottom:12} },
+      h('div', { className:'card-label' }, '支出の内訳（タップで詳細）'),
+      h(DonutChart, { data:donutData, total:totExp, selected:selCat, onSelect:setSelCat }),
+      h('div', { style:{display:'flex',flexWrap:'wrap',gap:'6px 12px',marginTop:10,justifyContent:'center'} },
+        donutData.map(d => h('button', {
+          key: d.cat,
+          onClick: () => setSelCat(s => s===d.cat ? null : d.cat),
+          style:{
+            display:'flex',alignItems:'center',gap:5,padding:'4px 10px',
+            borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+            borderColor: selCat===d.cat ? d.color : '#E5E5E5',
+            background:  selCat===d.cat ? d.color+'18' : '#fff',
+            color:       selCat===d.cat ? d.color : '#888',
+            transition:'all .15s',
+          }
+        }, BCAT_ICONS[d.cat]+' '+d.cat))
       ),
-      h('button',{className:'btn btn-grad',onClick:add},'追加する'),
     ),
-    h('div',{className:'chip-row',style:{marginBottom:10}},[{k:'all',l:'すべて'},{k:'expense',l:'支出'},{k:'income',l:'収入'}].map(f=>h('button',{key:f.k,className:'chip'+(filter===f.k?' on':''),style:{color:filter===f.k?'#333':'#888',borderColor:filter===f.k?'#333':'#E5E5E5',background:filter===f.k?'#EEE':'#fff'},onClick:()=>setFilter(f.k)},f.l))),
-    h('div',{className:'card'},
-      visible.length===0?h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'💳'),'記録がありません')
-      :[...visible].sort((a,b)=>b.date.localeCompare(a.date)).map(b=>{
-        const m=members.find(x=>x.id===b.memberId)??members[0];
-        return h('div',{key:b.id,className:'b-row'},
-          h('div',{className:'b-icon',style:{background:BCLR[b.category]+'28'}},m?.emoji),
-          h('div',{style:{flex:1,minWidth:0}},h('div',{style:{fontSize:14,fontWeight:700}},b.title),h('div',{style:{fontSize:11,color:'#AAA',marginTop:1}},b.date+' · ',h('span',{style:{color:BCLR[b.category],fontWeight:700}},b.category))),
-          h('div',{style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0}},(b.type==='income'?'+':'-')+'¥'+b.amount.toLocaleString()),
-          h('button',{className:'del',onClick:()=>del(b.id)},'✕'),
-        );
-      })
+
+    // ── Add button ───────────────────────────────────────────────────────────
+    h('button', {
+      className:'btn btn-purple', style:{marginBottom:12},
+      onClick:()=>setShow(p=>!p),
+    }, show ? '✕ 閉じる' : '＋ 収支を記録する'),
+
+    // ── Add form ─────────────────────────────────────────────────────────────
+    show && h('div', { className:'card fi' },
+      // Type toggle
+      h('div', { className:'type-row' },
+        [{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t =>
+          h('button', { key:t.k,
+            className:'type-btn'+(form.type===t.k?' on':''),
+            onClick:()=>sf('type')(t.k),
+          }, t.label)
+        )
+      ),
+      // Title
+      h('input', {
+        className:'field', placeholder:'内容（例：スーパー、電車代）',
+        maxLength:LIM.text, value:form.title,
+        onChange:e=>sf('title')(e.target.value),
+      }),
+      // Amount — big tappable input
+      h('div', { style:{position:'relative',marginBottom:10} },
+        h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:18,fontWeight:800,color:'#CCC'} }, '¥'),
+        h('input', {
+          className:'field',
+          style:{paddingLeft:30,marginBottom:0,fontSize:20,fontWeight:800,letterSpacing:1},
+          type:'number', inputMode:'numeric', placeholder:'0',
+          min:0, max:LIM.amount, value:form.amount,
+          onChange:e=>sf('amount')(e.target.value),
+        }),
+      ),
+      // Category — icon buttons
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:8} }, 'カテゴリ'),
+        h('div', { style:{display:'flex',flexWrap:'wrap',gap:8} },
+          BCATS.map(c => h('button', { key:c,
+            onClick:()=>sf('category')(c),
+            style:{
+              padding:'8px 12px',borderRadius:14,border:'2px solid',fontSize:13,fontWeight:700,
+              display:'flex',alignItems:'center',gap:5,
+              borderColor: form.category===c ? BCLR[c] : '#E5E5E5',
+              background:  form.category===c ? BCLR[c]+'22' : '#fff',
+              color:       form.category===c ? BCLR[c] : '#888',
+              transition:'all .15s',
+            }
+          }, BCAT_ICONS[c]+' '+c))
+        ),
+      ),
+      // Date
+      h('input', { className:'field', type:'date', value:form.date, onChange:e=>sf('date')(e.target.value) }),
+      // Member
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 誰が？'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},
+            onClick:()=>sf('memberId')(m.id),
+          }, m.emoji+' '+m.name))
+        ),
+      ),
+      h('button', { className:'btn btn-grad', onClick:add,
+        disabled: !form.title.trim() || !form.amount,
+      }, '追加する'),
+    ),
+
+    // ── Filter ───────────────────────────────────────────────────────────────
+    h('div', { className:'chip-row', style:{marginBottom:10} },
+      [{k:'all',l:'すべて'},{k:'expense',l:'💸 支出'},{k:'income',l:'💰 収入'}].map(f =>
+        h('button', { key:f.k, className:'chip'+(filter===f.k?' on':''),
+          style:{color:filter===f.k?'#333':'#888',borderColor:filter===f.k?'#333':'#E5E5E5',background:filter===f.k?'#EEE':'#fff'},
+          onClick:()=>setFilter(f.k),
+        }, f.l)
+      )
+    ),
+
+    // ── List ─────────────────────────────────────────────────────────────────
+    h('div', { className:'card' },
+      listItems.length === 0
+        ? h('div', { className:'empty', style:{padding:'16px 0'} },
+            h('span', { className:'empty-ico' }, '💳'), 'この月の記録はありません')
+        : listItems.map(b => {
+            const m = members.find(x => x.id===b.memberId) ?? members[0];
+            return h('div', { key:b.id, className:'b-row' },
+              h('div', { className:'b-icon', style:{background:BCLR[b.category]+'28',fontSize:20} },
+                BCAT_ICONS[b.category]),
+              h('div', { style:{flex:1,minWidth:0} },
+                h('div', { style:{fontSize:14,fontWeight:700} }, b.title),
+                h('div', { style:{fontSize:11,color:'#AAA',marginTop:1,display:'flex',gap:6,alignItems:'center'} },
+                  h('span', null, b.date),
+                  h('span', { style:{color:BCLR[b.category],fontWeight:700} }, BCAT_ICONS[b.category]+b.category),
+                  h('span', { style:{color:m?.color,fontWeight:700} }, m?.emoji+m?.name),
+                ),
+              ),
+              h('div', { style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0,marginRight:4} },
+                (b.type==='income' ? '+' : '-') + fmt(b.amount)),
+              h('button', { className:'del', onClick:()=>del(b.id) }, '✕'),
+            );
+          })
     ),
   );
 }
