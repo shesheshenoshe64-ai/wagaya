@@ -154,33 +154,26 @@ a{color:inherit}
 .box-red{background:#FFEBEE;border:1.5px solid #FFCDD2;color:#B71C1C}
 .box-blue{background:#E3F2FD;border:1.5px solid #90CAF9;color:#0D47A1}
 
-/* ── Meal planner ─────────────────────────────────────────────────────────── */
-.week-grid{display:flex;flex-direction:column;gap:8px}
-.meal-day{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.055)}
-.meal-day-hdr{display:flex;align-items:center;gap:10px;padding:11px 15px 10px;cursor:pointer;user-select:none}
-.meal-day-hdr:active{background:#FFF5F8}
-.meal-dow-badge{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
-.meal-day-info{flex:1;min-width:0}
-.meal-day-name{font-size:14px;font-weight:800}
-.meal-day-dish{font-size:12px;color:#888;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meal-day-body{padding:0 15px 14px;border-top:1px solid #F5F5F5}
-.meal-form{display:flex;flex-direction:column;gap:0}
-.meal-ing-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.meal-ing-input{flex:1;padding:9px 12px;border:2px solid #EBEBEB;border-radius:10px;font-size:14px;background:#FAFAFA;color:#1E1E1E;transition:border-color .15s;font-family:inherit}
-.meal-ing-input:focus{border-color:#FF5E8A;background:#fff;outline:none}
-.meal-add-ing{width:34px;height:34px;border-radius:10px;background:#FF5E8A;color:#fff;font-size:20px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s}
-.meal-add-ing:active{transform:scale(.88)}
-.meal-ing-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#FFF0F5;border-radius:20px;font-size:12px;font-weight:700;color:#FF5E8A;margin:0 4px 4px 0}
-.meal-ing-tag button{color:#FFB3C6;font-size:13px;line-height:1;padding:0 1px}
-.meal-ing-tag button:active{color:#FF5E8A}
-.meal-to-cart{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border-radius:12px;background:linear-gradient(135deg,#43A047,#00897B);color:#fff;font-size:13px;font-weight:800;margin-top:8px;box-shadow:0 3px 10px rgba(67,160,71,.25);transition:transform .1s,opacity .1s}
-.meal-to-cart:active{transform:scale(.97);opacity:.9}
-.meal-to-cart:disabled{background:#E0E0E0;box-shadow:none;color:#AAA}
-.meal-week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.meal-week-label{font-size:15px;font-weight:800}
-.meal-nav-btn{width:36px;height:36px;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:18px;font-weight:900;color:#FF5E8A;display:flex;align-items:center;justify-content:center;transition:transform .12s}
-.meal-nav-btn:active{transform:scale(.88)}
-.meal-empty-dish{font-size:11px;color:#CCC;font-style:italic}
+/* ── Photo memo ──────────────────────────────────────────────────────────── */
+.photo-timeline{display:flex;flex-direction:column;gap:12px}
+.photo-card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.08)}
+.photo-img{width:100%;max-height:300px;object-fit:cover;display:block;cursor:pointer}
+.photo-body{padding:12px 14px 14px}
+.photo-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.photo-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.photo-who{font-size:12px;font-weight:800;flex:1}
+.photo-time{font-size:11px;color:#BBB}
+.photo-memo{font-size:14px;color:#333;line-height:1.6;word-break:break-word}
+.photo-del{color:#DDD;font-size:16px;padding:2px 5px;border-radius:7px;transition:color .12s}
+.photo-del:active{color:#FF5E8A}
+.photo-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
+.photo-lightbox img{max-width:100%;max-height:90dvh;border-radius:12px;object-fit:contain}
+.photo-lightbox-close{position:absolute;top:16px;right:16px;color:#fff;font-size:28px;padding:4px 10px;background:rgba(255,255,255,.15);border-radius:10px}
+.photo-upload-area{border:2.5px dashed #DDD;border-radius:18px;padding:28px 16px;text-align:center;color:#CCC;font-size:14px;font-weight:700;cursor:pointer;transition:all .18s;margin-bottom:10px}
+.photo-upload-area:active,.photo-upload-area.drag{border-color:#FF5E8A;background:#FFF5F8;color:#FF5E8A}
+.photo-preview{width:100%;max-height:220px;object-fit:cover;border-radius:14px;margin-bottom:10px;display:block}
+@keyframes photoIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.photo-card{animation:photoIn .22s ease both}
 /* ── Board (swipe) ───────────────────────────────────────────────────────── */
 .board-wrap{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 16px;gap:12px}
 .board-stack{position:relative;width:100%;height:340px;margin-bottom:4px}
@@ -239,9 +232,6 @@ import { createRoot } from 'https://esm.sh/react-dom@18/client';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LS_CFG    = 'wagaya_firebase_cfg_v1';
-const LS_AI_KEY = 'wagaya_ai_key_v1';
-const loadAiKey = () => { try { return localStorage.getItem(LS_AI_KEY)||'' } catch { return '' } };
-const saveAiKey = k => { try { localStorage.setItem(LS_AI_KEY, k) } catch {} };
 const DB_PATH = 'wagaya/v1';
 const LIM = { text:100, note:200, amount:9999999, cats:30, items:300, events:500, budget:500, members:8 };
 
@@ -279,8 +269,8 @@ const vB = b => b&&typeof b.id==='string'&&typeof b.amount==='number'&&b.amount>
 const vS = i => i&&typeof i.id==='string'&&typeof i.text==='string';
 const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
 const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
+const vP = p => p && typeof p.id==='string' && typeof p.img==='string';
 const vN = n => n && typeof n.id==='string' && typeof n.text==='string' && n.text.length>0;
-const vMeal = m => m && typeof m.id==='string' && typeof m.date==='string';
 
 // ── Config persistence ────────────────────────────────────────────────────────
 const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
@@ -520,7 +510,7 @@ function MainApp({ db, onReset }) {
   const [shopping, setShopping] = useState([]);
   const [shopCats, setShopCats] = useState(DEF_CATS);
   const [notes,    setNotes]    = useState([]);
-  const [meals,    setMeals]    = useState([]);
+  const [photos,   setPhotos]   = useState([]);
 
   // Track writes to avoid echo
   const writing = useRef({});
@@ -547,7 +537,7 @@ function MainApp({ db, onReset }) {
     listen('shopping', setShopping, vS, []);
     listen('shopCats', setShopCats, vC, DEF_CATS);
     listen('notes',    setNotes,    vN, []);
-    listen('meals',    setMeals,    vMeal, []);
+    listen('photos',   setPhotos,   vP, []);
     return () => unsubs.forEach(u => u());
   }, [db]);
 
@@ -569,14 +559,14 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
   useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
   useEffect(() => { if (synced) writeDb('notes',    notes);    }, [notes]);
-  useEffect(() => { if (synced) writeDb('meals',    meals);    }, [meals]);
+  useEffect(() => { if (synced) writeDb('photos',   photos);   }, [photos]);
 
   const TABS = [
     { k:'shop',   label:'🛒 買い物' },
     { k:'cal',    label:'📅 予定' },
     { k:'budget', label:'💰 家計' },
     { k:'board',  label:'📝 掲示板' },
-    { k:'meal',   label:'🍽 献立' },
+    { k:'photo',  label:'📷 写真' },
     { k:'cfg',    label:'⚙️' },
   ];
 
@@ -604,7 +594,7 @@ function MainApp({ db, onReset }) {
       tab==='cal'    && h(CalTab,    { events, setEvents, members }),
       tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
       tab==='board'  && h(BoardTab,  { notes, setNotes, members }),
-      tab==='meal'   && h(MealTab,   { meals, setMeals, shopping, setShopping, shopCats, members }),
+      tab==='photo'  && h(PhotoTab,  { photos, setPhotos, members }),
       tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
     ),
   );
@@ -933,319 +923,230 @@ function BudgetTab({ budget, setBudget, members }) {
 }
 
 
-// ═══════════════════════ MEAL PLANNER ═══════════════════════════════════════
-function MealTab({ meals, setMeals, setShopping, shopCats, members }) {
-  const [viewMode,   setViewMode]   = useState('week');  // 'week' | 'date'
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [pickDate,   setPickDate]   = useState(today());
-  const [openDay,    setOpenDay]    = useState(null);
 
-  const DAYS       = ['月','火','水','木','金','土','日'];
-  const DOW_COLORS = ['#4A90D9','#E87CA0','#F5A623','#5DAE5F','#9B59B6','#E74C3C','#1ABC9C'];
+// ═══════════════════════ PHOTO MEMO ══════════════════════════════════════════
+function PhotoTab({ photos, setPhotos, members }) {
+  const [memId,    setMemId]    = useState(members[0]?.id ?? '');
+  const [memo,     setMemo]     = useState('');
+  const [preview,  setPreview]  = useState(null);  // base64 of selected image
+  const [lightbox, setLightbox] = useState(null);  // base64 to show full screen
+  const [posting,  setPosting]  = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const fileRef = useRef(null);
 
-  const getMonday = offset => {
-    const d = new Date(), dow = d.getDay();
-    d.setDate(d.getDate() + (dow===0 ? -6 : 1-dow) + offset*7);
-    d.setHours(0,0,0,0); return d;
-  };
-  const monday = getMonday(weekOffset);
-  const weekDays = DAYS.map((label,i) => {
-    const d = new Date(monday); d.setDate(d.getDate()+i);
-    const dateStr = d.toISOString().slice(0,10);
-    return { label, dateStr, isToday: dateStr===today(), color: DOW_COLORS[i] };
+  useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
+
+  // Resize image to max 900px on long side, quality 0.82
+  const resizeImage = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        let { width: w, height: h } = img;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
-  const weekLabel = (() => {
-    const end = new Date(monday); end.setDate(end.getDate()+6);
-    return (monday.getMonth()+1)+'/'+monday.getDate()+'〜'+(end.getMonth()+1)+'/'+end.getDate();
-  })();
 
-  // date-mode: figure out dow for picked date
-  const pickedInfo = (() => {
-    const d = new Date(pickDate+'T00:00:00'), i = (d.getDay()+6)%7;
-    return { label:DAYS[i], color:DOW_COLORS[i], isToday:pickDate===today() };
-  })();
-
-  const getMeal  = dateStr => meals.find(m => m.date===dateStr) ?? null;
-  const saveMeal = (dateStr, dish, ings, memo) => {
-    const ex = getMeal(dateStr);
-    const payload = { dish:clean(dish,LIM.text), ings, memo:clean(memo||'',LIM.note) };
-    if (ex) setMeals(p => p.map(m => m.date===dateStr ? {...m,...payload} : m));
-    else {
-      if (!dish.trim() && !ings.length && !(memo||'').trim()) return;
-      setMeals(p => [...p, { id:uid(), date:dateStr, ...payload }]);
-    }
-  };
-  const clearMeal = dateStr => setMeals(p => p.filter(m => m.date!==dateStr));
-  const addToCart = items => {
-    if (!items.length) return;
-    const cat = shopCats[0]?.id ?? '', mem = members[0]?.id ?? '';
-    setShopping(p => [...p, ...items.map(t => ({ id:uid(), text:t, memberId:mem, catId:cat, done:false }))]);
+  const handleFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    try {
+      const b64 = await resizeImage(file);
+      setPreview(b64);
+      setShowForm(true);
+    } catch { alert('画像の読み込みに失敗しました'); }
   };
 
-  const displayDays = viewMode==='week'
-    ? weekDays
-    : [{ label:pickedInfo.label, dateStr:pickDate, isToday:pickedInfo.isToday, color:pickedInfo.color }];
+  const handleInputChange = e => handleFile(e.target.files[0]);
+
+  const handleDrop = e => {
+    e.preventDefault();
+    handleFile(e.dataTransfer.files[0]);
+  };
+
+  const post = () => {
+    if (!preview || posting) return;
+    setPosting(true);
+    const entry = {
+      id: uid(),
+      img: preview,
+      memo: clean(memo, 200),
+      memberId: memId,
+      ts: Date.now(),
+    };
+    setPhotos(p => [entry, ...p].slice(0, 50)); // max 50 photos
+    setPreview(null); setMemo(''); setShowForm(false); setPosting(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const del = id => { if (confirm('この写真を削除しますか？')) setPhotos(p => p.filter(x => x.id !== id)); };
+
+  // 既読: seenBy は memberId の配列
+  const toggleSeen = (photoId) => {
+    setPhotos(p => p.map(x => {
+      if (x.id !== photoId) return x;
+      const seen = x.seenBy ?? [];
+      const already = seen.includes(memId);
+      return { ...x, seenBy: already ? seen.filter(s => s !== memId) : [...seen, memId] };
+    }));
+  };
+
+  const fmtTime = ts => {
+    const d = new Date(ts), now = new Date(), diff = (now - d) / 1000;
+    if (diff < 60)    return 'たった今';
+    if (diff < 3600)  return Math.floor(diff/60)+'分前';
+    if (diff < 86400) return Math.floor(diff/3600)+'時間前';
+    return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  };
+
+  const sorted = [...photos].sort((a,b) => b.ts - a.ts);
 
   return h(Fragment, null,
-    // ── View toggle ────────────────────────────────────────────────────────
-    h('div', { style:{display:'flex',gap:8,marginBottom:12} },
-      ['week','date'].map((mode,i) =>
-        h('button', { key:mode,
-          style:{flex:1,padding:'9px',borderRadius:12,border:'2px solid',fontSize:13,fontWeight:800,
-                 borderColor:viewMode===mode?'#FF5E8A':'#E5E5E5',
-                 background:viewMode===mode?'#FFF0F5':'#fff',
-                 color:viewMode===mode?'#FF5E8A':'#AAA'},
-          onClick:()=>setViewMode(mode)
-        }, i===0?'📅 週で見る':'🗓 日付で指定')
-      )
-    ),
 
-    // ── Week nav ───────────────────────────────────────────────────────────
-    viewMode==='week' && h(Fragment, null,
-      h('div', { className:'meal-week-nav' },
-        h('button', { className:'meal-nav-btn', onClick:()=>setWeekOffset(w=>w-1) }, '‹'),
-        h('div', { className:'meal-week-label' },
-          weekOffset===0?'今週 '+weekLabel : weekOffset===1?'来週 '+weekLabel : weekOffset===-1?'先週 '+weekLabel : weekLabel
+    // ── Post button ──────────────────────────────────────────────────────────
+    h('button', {
+      className: 'btn btn-grad',
+      style: { marginBottom:12, boxShadow:'0 4px 14px rgba(255,94,138,.28)' },
+      onClick: () => setShowForm(p => !p),
+    }, showForm ? '✕ 閉じる' : '📷 写真を投稿する'),
+
+    // ── Post form ─────────────────────────────────────────────────────────────
+    showForm && h('div', { className:'card fi', style:{marginBottom:12} },
+
+      // Image picker
+      preview
+        ? h(Fragment, null,
+            h('img', { src:preview, className:'photo-preview' }),
+            h('button', { className:'btn btn-ghost', style:{marginBottom:10,fontSize:13},
+              onClick:()=>{ setPreview(null); if(fileRef.current) fileRef.current.value=''; }
+            }, '✕ 写真を選び直す'),
+          )
+        : h('div', {
+            className: 'photo-upload-area',
+            onClick: () => fileRef.current?.click(),
+            onDragOver: e => e.preventDefault(),
+            onDrop: handleDrop,
+          },
+            h('div', { style:{fontSize:36,marginBottom:6} }, '📷'),
+            'タップして写真を選ぶ',
+            h('br'),
+            h('span', { style:{fontSize:11,color:'#CCC'} }, 'カメラ撮影またはカメラロールから'),
+          ),
+
+      // Hidden file input — accept images, allow camera
+      h('input', {
+        ref: fileRef, type:'file', accept:'image/*', capture:'environment',
+        style:{display:'none'}, onChange: handleInputChange,
+      }),
+
+      // Memo input
+      h('textarea', { className:'field', style:{minHeight:72,resize:'none',marginBottom:10},
+        placeholder:'メモを追加（任意）…', maxLength:200, value:memo,
+        onChange: e => setMemo(e.target.value),
+      }),
+
+      // Who
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 投稿者'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
+            onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
         ),
-        h('button', { className:'meal-nav-btn', onClick:()=>setWeekOffset(w=>w+1) }, '›'),
       ),
-      weekOffset!==0 && h('button', { className:'btn btn-ghost', style:{marginBottom:10,width:'100%',fontSize:13},
-        onClick:()=>setWeekOffset(0) }, '今週に戻る'),
+
+      h('button', { className:'btn btn-grad', style:{boxShadow:'none'},
+        disabled: !preview || posting,
+        onClick: post,
+      }, posting ? '投稿中…' : '投稿する'),
     ),
 
-    // ── Date picker ────────────────────────────────────────────────────────
-    viewMode==='date' && h('input', {
-      className:'field', type:'date', style:{marginBottom:12},
-      value:pickDate, onChange:e=>{ setPickDate(e.target.value); setOpenDay(null); }
-    }),
+    // ── 自分として見る ─────────────────────────────────────────────────────────
+    h('div', { className:'card', style:{marginBottom:12, padding:'11px 14px'} },
+      h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:8} }, '👤 自分として見る（既読に使います）'),
+      h('div', { className:'chips' },
+        members.map(m => h('button', { key:m.id, className:'m-chip',
+          style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
+          onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
+      ),
+    ),
 
-    // ── Day cards ──────────────────────────────────────────────────────────
-    h('div', { className:'week-grid' },
-      displayDays.map(({ label, dateStr, isToday, color }) => {
-        const meal   = getMeal(dateStr);
-        const isOpen = viewMode==='date' || openDay===dateStr;
-        return h(DayCard, {
-          key:dateStr, label, dateStr, isToday, color, meal, isOpen,
-          onToggle: viewMode==='week' ? ()=>setOpenDay(p=>p===dateStr?null:dateStr) : null,
-          onSave:saveMeal, onClear:clearMeal, onAddToCart:addToCart,
-        });
-      })
+    // ── Timeline ──────────────────────────────────────────────────────────────
+    sorted.length === 0
+      ? h('div', { className:'empty' },
+          h('span', { className:'empty-ico' }, '📷'),
+          '写真はまだありません
+上から投稿してみましょう'
+        )
+      : h('div', { className:'photo-timeline' },
+          sorted.map(p => {
+            const m = members.find(x => x.id===p.memberId) ?? members[0];
+            const seenBy  = p.seenBy ?? [];
+            const iSeen   = seenBy.includes(memId);
+            // members who have seen it (show avatars)
+            const seenMembers = members.filter(x => seenBy.includes(x.id));
+            return h('div', { key:p.id, className:'photo-card' },
+              h('img', { src:p.img, className:'photo-img', onClick:()=>setLightbox(p.img) }),
+              h('div', { className:'photo-body' },
+                // meta row: avatar / name / time / delete
+                h('div', { className:'photo-meta' },
+                  h('div', { className:'photo-avatar', style:{background:(m?.color??'#ccc')+'22'} }, m?.emoji),
+                  h('div', { className:'photo-who', style:{color:m?.color} }, m?.name),
+                  h('div', { className:'photo-time' }, fmtTime(p.ts)),
+                  h('button', { className:'photo-del', onClick:()=>del(p.id) }, '✕'),
+                ),
+                // memo
+                p.memo && h('div', { className:'photo-memo', style:{marginBottom:8} }, p.memo),
+                // seen row
+                h('div', { style:{display:'flex', alignItems:'center', gap:6, marginTop:4} },
+                  // seen avatars
+                  seenMembers.length > 0 && h('div', { style:{display:'flex', gap:2} },
+                    seenMembers.map(sm =>
+                      h('span', { key:sm.id, title:sm.name+'が既読',
+                        style:{fontSize:14, opacity:.75} }, sm.emoji)
+                    )
+                  ),
+                  seenMembers.length > 0 && h('span', { style:{fontSize:10, color:'#CCC', fontWeight:700} },
+                    '既読 '+seenMembers.length
+                  ),
+                  h('div', { style:{flex:1} }),
+                  // my seen toggle button
+                  h('button', {
+                    onClick: () => toggleSeen(p.id),
+                    style:{
+                      display:'flex', alignItems:'center', gap:4,
+                      padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:800,
+                      border:'2px solid', transition:'all .15s',
+                      borderColor: iSeen ? '#4CAF50' : '#E5E5E5',
+                      background:  iSeen ? '#E8F5E9' : '#fff',
+                      color:       iSeen ? '#2E7D32' : '#AAA',
+                    }
+                  }, iSeen ? '✓ 既読' : '既読にする'),
+                ),
+              ),
+            );
+          })
+        ),
+
+    // ── Lightbox ──────────────────────────────────────────────────────────────
+    lightbox && h('div', { className:'photo-lightbox', onClick:()=>setLightbox(null) },
+      h('img', { src:lightbox }),
+      h('button', { className:'photo-lightbox-close', onClick:()=>setLightbox(null) }, '✕'),
     ),
   );
 }
-
-function DayCard({ label, dateStr, isToday, color, meal, isOpen, onToggle, onSave, onClear, onAddToCart }) {
-  const [dish,      setDish]      = useState(meal?.dish ?? '');
-  const [ings,      setIngs]      = useState(meal?.ings ?? []);
-  const [memo,      setMemo]      = useState(meal?.memo ?? '');
-  const [ingTxt,    setIngTxt]    = useState('');
-  const [flash,     setFlash]     = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError,   setAiError]   = useState('');
-  const [suggested, setSuggested] = useState([]); // AI-suggested items not yet added
-
-  useEffect(() => {
-    setDish(meal?.dish ?? '');
-    setIngs(meal?.ings ?? []);
-    setMemo(meal?.memo ?? '');
-  }, [meal?.dish, meal?.memo, JSON.stringify(meal?.ings ?? [])]);
-
-  const persist = (d, i, m) => onSave(dateStr, d, i, m);
-
-  const addIng = () => {
-    const t = clean(ingTxt); if (!t || ings.length>=30) return;
-    const next = [...ings, t]; setIngs(next); setIngTxt(''); persist(dish, next, memo);
-  };
-  const removeIng = i => {
-    const next = ings.filter((_,j)=>j!==i); setIngs(next); persist(dish, next, memo);
-  };
-  const addOne = (ing, i) => {
-    onAddToCart([ing]);
-    setFlash(i); setTimeout(()=>setFlash(null), 1100);
-  };
-  const addAll = () => onAddToCart(ings);
-  const handleClear = () => { setDish(''); setIngs([]); setMemo(''); setSuggested([]); onClear(dateStr); };
-
-  // ── AI: suggest ingredients from dish name ────────────────────────────────
-  const fetchAiIngs = async () => {
-    const name = dish.trim();
-    if (!name) return;
-    const apiKey = loadAiKey();
-    if (!apiKey) {
-      setAiError('⚙️ APIキーが未設定です。「設定」タブからAnthropicのAPIキーを登録してください。');
-      return;
-    }
-    setAiLoading(true); setAiError(''); setSuggested([]);
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
-          system: 'あなたは日本の家庭料理の専門家です。料理名を受け取り、一般的な材料リストをJSON配列で返してください。形式: ["材料1","材料2",...] のみ。説明不要。材料は短く（例:「鶏もも肉」「玉ねぎ」「醤油」）、8〜12品程度。',
-          messages: [{ role: 'user', content: name }]
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(()=>({}));
-        throw new Error(err?.error?.message ?? 'APIエラー ('+res.status+')');
-      }
-      const data = await res.json();
-      const text = data.content?.[0]?.text ?? '';
-      const match = text.match(/\[[\s\S]*\]/);
-      if (!match) throw new Error('parse error');
-      const arr = JSON.parse(match[0]);
-      if (!Array.isArray(arr)) throw new Error('not array');
-      const filtered = arr.map(s=>String(s).trim()).filter(s=>s&&!ings.includes(s)).slice(0,15);
-      setSuggested(filtered);
-    } catch(e) {
-      setAiError('取得に失敗しました: ' + e.message);
-    }
-    setAiLoading(false);
-  };
-
-  // Accept one suggested item → move to ings
-  const acceptSug = (item) => {
-    const next = [...ings, item];
-    setIngs(next);
-    setSuggested(p => p.filter(s=>s!==item));
-    persist(dish, next, memo);
-  };
-  // Accept all
-  const acceptAllSug = () => {
-    const next = [...ings, ...suggested];
-    setIngs(next); setSuggested([]); persist(dish, next, memo);
-  };
-
-  const d = new Date(dateStr+'T00:00:00');
-  const dateLabel = (d.getMonth()+1)+'/'+(d.getDate());
-
-  return h('div', { className:'meal-day' },
-    // header
-    h('div', { className:'meal-day-hdr', onClick:onToggle, style:{cursor:onToggle?'pointer':'default'} },
-      h('div', { className:'meal-dow-badge', style:{background:color+'22',color} },
-        isToday ? h('span',{style:{fontSize:10}},'今日') : label
-      ),
-      h('div', { className:'meal-day-info' },
-        h('div', { className:'meal-day-name', style:{color:isToday?'#FF5E8A':'#1E1E1E'} },
-          label+'曜日 '+dateLabel+(isToday?' (今日)':'')),
-        meal?.dish
-          ? h('div',{className:'meal-day-dish'},'🍽 '+meal.dish+(meal.ings?.length?' 📦'+meal.ings.length+'品':''))
-          : h('div',{className:'meal-empty-dish'},'未定'),
-      ),
-      onToggle && h('span',{style:{fontSize:14,color:'#CCC',flexShrink:0}},isOpen?'▲':'▼'),
-    ),
-
-    // body
-    isOpen && h('div', { className:'meal-day-body su' },
-
-      // 夕飯名
-      h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',margin:'12px 0 6px'}},'🍳 夕飯'),
-      h('input',{ className:'field', style:{marginBottom:8}, placeholder:'例: カレー、唐揚げ、餃子…',
-        maxLength:LIM.text, value:dish,
-        onChange:e=>setDish(e.target.value),
-        onBlur:()=>{ if(dish.trim()||ings.length||memo.trim()) persist(dish,ings,memo); },
-        onKeyDown:e=>{ if(e.key==='Enter'){persist(dish,ings,memo);e.target.blur();} }
-      }),
-
-      // メモ
-      h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'📝 メモ'),
-      h('textarea',{ className:'field', style:{minHeight:58,resize:'none',marginBottom:10},
-        placeholder:'例: 塩分控えめで、子どもには辛さ抜き…',
-        maxLength:LIM.note, value:memo,
-        onChange:e=>setMemo(e.target.value),
-        onBlur:()=>{ if(dish.trim()||ings.length||memo.trim()) persist(dish,ings,memo); }
-      }),
-
-      // 材料
-      h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},
-        h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',flex:1}},'📦 材料'),
-        h('button',{
-          disabled: !dish.trim() || aiLoading,
-          onClick: fetchAiIngs,
-          style:{display:'flex',alignItems:'center',gap:4,padding:'5px 11px',borderRadius:20,
-                 border:'none',fontSize:12,fontWeight:800,cursor:dish.trim()?'pointer':'not-allowed',
-                 background:dish.trim()?'linear-gradient(135deg,#7C3AED,#A855F7)':'#E5E5E5',
-                 color:dish.trim()?'#fff':'#BBB',
-                 boxShadow:dish.trim()?'0 2px 8px rgba(168,85,247,.3)':'none',
-                 transition:'all .15s'}
-        },
-          aiLoading
-            ? h(Fragment,null,h('span',{className:'spinner',style:{width:12,height:12,borderWidth:2,marginRight:2}}),'推測中…')
-            : '✨ AIで自動入力'
-        ),
-      ),
-
-      // AI error
-      aiError && h('div',{style:{fontSize:12,color:'#E53935',marginBottom:6,padding:'6px 10px',background:'#FFEBEE',borderRadius:8}}, aiError),
-
-      // AI suggestions (chips to accept)
-      suggested.length>0 && h('div',{style:{background:'#F5F0FF',borderRadius:12,padding:'10px 12px',marginBottom:8}},
-        h('div',{style:{fontSize:10,fontWeight:800,color:'#7C3AED',letterSpacing:'.5px',marginBottom:7}},
-          '✨ AIの提案 — タップで追加'),
-        h('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}},
-          suggested.map(s=>h('button',{key:s,
-            style:{padding:'5px 11px',borderRadius:20,border:'2px dashed #C4B5FD',background:'#fff',
-                   fontSize:12,fontWeight:700,color:'#7C3AED',cursor:'pointer',transition:'all .12s'},
-            onClick:()=>acceptSug(s)
-          }, '+ '+s))
-        ),
-        h('button',{
-          onClick:acceptAllSug,
-          style:{width:'100%',padding:'8px',borderRadius:10,border:'none',
-                 background:'linear-gradient(135deg,#7C3AED,#A855F7)',color:'#fff',
-                 fontSize:13,fontWeight:800,cursor:'pointer'}
-        }, 'すべて追加 ('+suggested.length+'品)'),
-      ),
-
-      // Confirmed ingredients
-      ings.length>0 && h('div',{style:{display:'flex',flexWrap:'wrap',marginBottom:8}},
-        ings.map((ing,i)=>h('span',{key:i,className:'meal-ing-tag',
-          style:{background:flash===i?'#E8F5E9':undefined,
-                 color:flash===i?'#2E7D32':undefined,
-                 transition:'background .3s,color .3s'}},
-          h('button',{
-            title:'買い物リストに追加',
-            style:{color:flash===i?'#43A047':'#FFB3C6',fontSize:12,marginRight:3,lineHeight:1},
-            onClick:e=>{e.stopPropagation();addOne(ing,i);}
-          }, flash===i?'✓':'🛒'),
-          ing,
-          h('button',{style:{marginLeft:3},onClick:e=>{e.stopPropagation();removeIng(i);}},'✕'),
-        ))
-      ),
-      h('div',{className:'meal-ing-row'},
-        h('input',{className:'meal-ing-input', placeholder:'材料を追加（例: 鶏もも肉、玉ねぎ…）',
-          maxLength:40, value:ingTxt,
-          onChange:e=>setIngTxt(e.target.value),
-          onKeyDown:e=>e.key==='Enter'&&addIng()
-        }),
-        h('button',{className:'meal-add-ing',onClick:addIng},'＋'),
-      ),
-
-      // cart buttons
-      ings.length>0 && h('button',{
-        className:'meal-to-cart', style:{marginTop:8},
-        onClick:addAll,
-      },
-        '🛒 材料をまとめて追加',
-        h('span',{style:{background:'rgba(255,255,255,.25)',borderRadius:20,padding:'1px 8px',fontSize:11,marginLeft:6}}, ings.length+'品')
-      ),
-
-      // clear
-      (dish.trim()||ings.length||memo.trim()) && h('button',{
-        className:'btn btn-ghost warn', style:{marginTop:8,width:'100%',fontSize:13},
-        onClick:handleClear
-      }, '✕ この日の献立を削除'),
-    ),
-  );
-}
-
 
 // ═══════════════════════ BOARD (SWIPE) ═══════════════════════════════════════
 function BoardTab({ notes, setNotes, members }) {
@@ -1451,9 +1352,6 @@ function CfgTab({ members, setMembers, onReset }) {
   const [newName, setNewName] = useState('');
   const [newEmoji,setNewEmoji]= useState(EMOJIS[0]);
   const [newClr,  setNewClr]  = useState(PAL[0]);
-  const [aiKey,   setAiKey]   = useState(loadAiKey);
-  const [aiSaved, setAiSaved] = useState(false);
-  const [showKey, setShowKey] = useState(false);
 
   const addM = () => {
     const name=clean(newName,20);
@@ -1462,12 +1360,6 @@ function CfgTab({ members, setMembers, onReset }) {
     setNewName('');setShowAdd(false);
   };
   const delM = id => { if(members.length<=1)return; setMembers(p=>p.filter(m=>m.id!==id)); };
-
-  const handleSaveKey = () => {
-    saveAiKey(aiKey.trim());
-    setAiSaved(true);
-    setTimeout(()=>setAiSaved(false), 2000);
-  };
 
   return h(Fragment, null,
     h('div',{className:'box box-green'},
@@ -1492,42 +1384,6 @@ function CfgTab({ members, setMembers, onReset }) {
           h('div',{className:'palette'},PAL.slice(0,12).map(c=>h('button',{key:c,className:'pal-dot'+(newClr===c?' on':''),style:{background:c},onClick:()=>setNewClr(c)}))),
           h('button',{className:'btn btn-grad',style:{background:newName.trim()?undefined:'#DDD',boxShadow:'none',color:newName.trim()?'#fff':'#AAA'},disabled:!newName.trim(),onClick:addM},'メンバーを追加'),
         ),
-      ),
-    ),
-
-    // ── AI設定 ────────────────────────────────────────────────────────────────
-    h('div',{className:'card'},
-      h('div',{className:'card-label'},'✨ AI材料推測（献立タブ）'),
-      h('div',{className:'box box-blue',style:{marginBottom:12}},
-        h('strong',null,'Anthropic APIキーが必要です'),
-        h('a',{href:'https://console.anthropic.com/settings/keys',target:'_blank',
-          style:{display:'inline-flex',alignItems:'center',gap:4,color:'#0D47A1',fontWeight:700,marginTop:4}},
-          '🔗 APIキーを取得する（console.anthropic.com）')
-      ),
-      h('div',{style:{position:'relative',marginBottom:8}},
-        h('input',{
-          className:'field field-mono',
-          style:{marginBottom:0,paddingRight:44},
-          type:showKey?'text':'password',
-          placeholder:'sk-ant-api03-…',
-          value:aiKey,
-          onChange:e=>setAiKey(e.target.value),
-          onKeyDown:e=>e.key==='Enter'&&handleSaveKey(),
-        }),
-        h('button',{
-          style:{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',
-                 fontSize:16,color:'#BBB',padding:'2px 4px'},
-          onClick:()=>setShowKey(p=>!p)
-        }, showKey?'🙈':'👁'),
-      ),
-      h('button',{
-        className:'btn btn-purple',
-        style:{boxShadow:'none', background:aiKey.trim()?undefined:'#DDD', color:aiKey.trim()?'#fff':'#AAA'},
-        disabled:!aiKey.trim(),
-        onClick:handleSaveKey,
-      }, aiSaved ? '✅ 保存しました！' : '💾 APIキーを保存'),
-      loadAiKey() && h('p',{style:{fontSize:11,color:'#AAA',marginTop:8,lineHeight:1.6}},
-        '⚠️ APIキーはこのデバイスのみに保存されます。家族それぞれのスマホで設定が必要です。'
       ),
     ),
 
