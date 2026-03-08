@@ -597,6 +597,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
   };
   const toggle    = id => setShopping(p => p.map(i => i.id===id ? {...i,done:!i.done} : i));
   const del       = id => setShopping(p => p.filter(i => i.id!==id));
+  const edit      = (id, changes) => setShopping(p => p.map(i => i.id===id ? {...i,...changes} : i));
   const clearDone = ()  => setShopping(p => p.filter(i => !i.done));
   const addCat = () => {
     const name = clean(newCatNm);
@@ -701,9 +702,9 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
                 g.pending.length>0 && h('div', { className:'cat-cnt', style:{background:g.cat.color+'1A',color:g.cat.color} }, g.pending.length+'件'),
               ),
               h('div', { className:'cat-items' },
-                g.pending.map(item => h(ShopItem, { key:item.id, item, members, onToggle:toggle, onDel:del })),
+                g.pending.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
                 g.done.length>0 && h('div', { style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4} },
-                  g.done.map(item => h(ShopItem, { key:item.id, item, members, onToggle:toggle, onDel:del })),
+                  g.done.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
                 ),
               ),
             )))
@@ -711,9 +712,9 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
           (filtered??[]).length===0
             ? h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'📭'),'このカテゴリに商品はありません')
             : h(Fragment,null,
-                (filtered??[]).filter(i=>!i.done).map(item=>h(ShopItem,{key:item.id,item,members,onToggle:toggle,onDel:del})),
+                (filtered??[]).filter(i=>!i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit})),
                 (filtered??[]).filter(i=>i.done).length>0&&h('div',{style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4}},
-                  (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,onToggle:toggle,onDel:del}))
+                  (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit}))
                 ),
               )
         ),
@@ -721,13 +722,72 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
       `✅ 完了済みを削除 (${done.length}件)`),
   );
 }
-function ShopItem({ item, members, onToggle, onDel }) {
-  const m = members.find(x=>x.id===item.memberId) ?? members[0];
+function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
+  const m = members.find(x => x.id===item.memberId) ?? members[0];
+  const cat = shopCats.find(c => c.id===item.catId) ?? shopCats[0];
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(item.text);
+  const [editCatId, setEditCatId] = useState(item.catId);
+  const inputRef = useRef(null);
+
+  const startEdit = e => { e.stopPropagation(); setEditText(item.text); setEditCatId(item.catId); setEditing(true); setTimeout(()=>inputRef.current?.focus(),80); };
+  const saveEdit  = () => {
+    const t = editText.trim();
+    if (t) onEdit(item.id, { text:t, catId:editCatId });
+    setEditing(false);
+  };
+  const cancelEdit = () => setEditing(false);
+
+  if (editing) return h('div', { className:'shop-item', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    // テキスト編集
+    h('div', { style:{display:'flex',gap:8,alignItems:'center'} },
+      h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1,fontSize:15},
+        value:editText, onChange:e=>setEditText(e.target.value),
+        onKeyDown:e=>{ if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit(); }
+      }),
+    ),
+    // カテゴリ選択
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap'} },
+      shopCats.map(c => h('button', { key:c.id,
+        onClick:()=>setEditCatId(c.id),
+        style:{
+          padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor: editCatId===c.id ? c.color : '#E5E5E5',
+          background:  editCatId===c.id ? c.color+'22' : '#fff',
+          color:       editCatId===c.id ? c.color : '#AAA',
+          transition:'all .12s',
+        }
+      }, c.name))
+    ),
+    // 保存・キャンセル
+    h('div', { style:{display:'flex',gap:8} },
+      h('button', { onClick:saveEdit,
+        style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13} },
+        '✓ 保存'),
+      h('button', { onClick:cancelEdit,
+        style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13} },
+        '✕'),
+    ),
+  );
+
   return h('div', { className:'shop-item'+(item.done?' done':'') },
     h('button', { className:'chk'+(item.done?' on':''), onClick:()=>onToggle(item.id) },
       item.done && h('span', { className:'chk-icon' }, '✓')),
     h('span', { style:{fontSize:19,flexShrink:0} }, m?.emoji),
-    h('span', { className:'shop-txt'+(item.done?' done':'') }, item.text),
+    // テキストをタップで編集開始
+    h('span', { className:'shop-txt'+(item.done?' done':''),
+      onClick: item.done ? undefined : startEdit,
+      style:{ cursor: item.done ? 'default' : 'pointer', flex:1 },
+      title: item.done ? '' : 'タップして編集',
+    }, item.text),
+    // カテゴリバッジ（タップで編集）
+    cat && !item.done && h('button', { onClick:startEdit,
+      style:{
+        fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:10,
+        background: cat.color+'18', color:cat.color, border:'1.5px solid '+cat.color+'44',
+        flexShrink:0, whiteSpace:'nowrap',
+      }
+    }, cat.name),
     h('span', { className:'shop-who', style:{color:m?.color} }, m?.name),
     h('button', { className:'del', onClick:()=>onDel(item.id) }, '✕'),
   );
