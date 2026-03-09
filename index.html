@@ -807,15 +807,21 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
 }
 // ═══════════════════════ CALENDAR ════════════════════════════════════════════
 function CalTab({ events, setEvents, members }) {
-  const [cur,      setCur]      = useState(new Date());
-  const [sel,      setSel]      = useState(null);
-  const [show,     setShow]     = useState(false);
-  const [showAll,  setShowAll]  = useState(false);
+  const [cur,     setCur]     = useState(new Date());
+  const [sel,     setSel]     = useState(null);
+  const [show,    setShow]    = useState(false);
   const [form, setForm] = useState({ title:'', date:'', time:'', allDay:true, memberId:members[0]?.id??'', note:'' });
   const sf = k => v => setForm(p => ({...p,[k]:v}));
   const now = new Date();
   const yr=cur.getFullYear(), mo=cur.getMonth();
   const fd=new Date(yr,mo,1).getDay(), dim=new Date(yr,mo+1,0).getDate();
+
+  // ── 過去の予定を自動削除（30日以上前） ────────────────────────────────────
+  useEffect(() => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+    setEvents(p => p.filter(e => e.date >= cutoffStr));
+  }, []);
 
   const addEv = () => {
     const title=clean(form.title), date=cleanDate(form.date);
@@ -824,7 +830,9 @@ function CalTab({ events, setEvents, members }) {
     setForm({title:'',date:'',time:'',allDay:true,memberId:members[0]?.id??'',note:''});
     setShow(false);
   };
-  const delEv = id => setEvents(p=>p.filter(e=>e.id!==id));
+  const delEv  = id => setEvents(p => p.filter(e => e.id!==id));
+  const editEv = (id, changes) => setEvents(p => p.map(e => e.id===id ? {...e,...changes} : e));
+
   const dayEvs = d => {
     const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     return events.filter(e=>e.date===ds).sort((a,b)=>{
@@ -832,8 +840,14 @@ function CalTab({ events, setEvents, members }) {
       return(a.time||'').localeCompare(b.time||'');
     });
   };
-  const upcoming = events.filter(e=>e.date>=today()).sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):(a.time||'').localeCompare(b.time||''));
-  const upcomingVisible = showAll ? upcoming : upcoming.slice(0, 7);
+
+  // 翌日の予定のみ
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+  const tmrEvents = events.filter(e => e.date === tomorrowStr).sort((a,b)=>{
+    if(a.allDay&&!b.allDay)return -1;if(!a.allDay&&b.allDay)return 1;
+    return(a.time||'').localeCompare(b.time||'');
+  });
 
   return h(Fragment,null,
     h('div',{className:'cal-nav'},
@@ -858,9 +872,12 @@ function CalTab({ events, setEvents, members }) {
         }),
       ),
     ),
+    // 日付タップ → その日の予定
     sel!==null&&h('div',{className:'card su'},
       h('div',{style:{fontWeight:800,color:'#FF5E8A',marginBottom:10,fontSize:15}},(mo+1)+'月'+sel+'日の予定'),
-      dayEvs(sel).length===0?h('div',{style:{color:'#BBB',fontSize:13,padding:'6px 0'}},'予定はありません'):dayEvs(sel).map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv})),
+      dayEvs(sel).length===0
+        ? h('div',{style:{color:'#BBB',fontSize:13,padding:'6px 0'}},'予定はありません')
+        : dayEvs(sel).map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,onEdit:editEv})),
       h('button',{style:{marginTop:10,padding:'7px 16px',background:'#FFF0F5',border:'2px solid #FF5E8A',color:'#FF5E8A',borderRadius:10,fontSize:13,fontWeight:800},
         onClick:()=>{const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(sel).padStart(2,'0')}`;sf('date')(ds);setShow(true)}},'＋ この日に追加'),
     ),
@@ -880,39 +897,72 @@ function CalTab({ events, setEvents, members }) {
       h('input',{className:'field',placeholder:'メモ（任意）',maxLength:LIM.note,value:form.note,onChange:e=>sf('note')(e.target.value)}),
       h('button',{className:'btn btn-grad',onClick:addEv},'追加する'),
     ),
+    // 明日の予定
     h('div',{className:'card'},
       h('div',{style:{display:'flex',alignItems:'center',marginBottom:8}},
-        h('div',{className:'card-label',style:{margin:0,flex:1}},'直近の予定'),
-        upcoming.length > 0 && h('span',{style:{fontSize:11,color:'#AAA',fontWeight:700}}, upcoming.length+'件'),
+        h('div',{className:'card-label',style:{margin:0,flex:1}},'明日の予定'),
+        h('span',{style:{fontSize:11,color:'#AAA',fontWeight:700}},
+          `${tomorrow.getMonth()+1}/${tomorrow.getDate()}（${'日月火水木金土'[tomorrow.getDay()]}）`),
       ),
-      upcoming.length===0
-        ? h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'直近の予定はありません')
-        : h(Fragment, null,
-            upcomingVisible.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,compact:true})),
-            upcoming.length > 7 && h('button',{
-              className:'btn btn-ghost', style:{marginTop:8,fontSize:13},
-              onClick:()=>setShowAll(p=>!p),
-            }, showAll ? '▲ 折りたたむ' : `▼ さらに${upcoming.length-7}件を表示`),
-          ),
+      tmrEvents.length===0
+        ? h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'明日の予定はありません')
+        : tmrEvents.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,onEdit:editEv,compact:true})),
     ),
   );
 }
-function EvRow({ ev, members, onDel, compact }) {
-  const m=members.find(x=>x.id===ev.memberId)??members[0];
+
+function EvRow({ ev, members, onDel, onEdit, compact }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ title:ev.title, date:ev.date, time:ev.time||'', allDay:ev.allDay, memberId:ev.memberId, note:ev.note||'' });
+  const sf = k => v => setF(p => ({...p,[k]:v}));
+  const m = members.find(x=>x.id===ev.memberId)??members[0];
+
+  const save = () => {
+    const title = clean(f.title), date = cleanDate(f.date);
+    if (!title||!date) return;
+    onEdit(ev.id, { title, date, time:f.allDay?'':cleanTime(f.time), allDay:Boolean(f.allDay), memberId:f.memberId, note:clean(f.note,200) });
+    setEditing(false);
+  };
+
+  if (editing) return h('div', { className:'ev-row', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    h('input',{className:'field',style:{margin:0},placeholder:'タイトル',maxLength:100,value:f.title,onChange:e=>sf('title')(e.target.value)}),
+    h('input',{className:'field',style:{margin:0},type:'date',value:f.date,onChange:e=>sf('date')(e.target.value)}),
+    h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+      h('button',{className:'toggle'+(f.allDay?' on':''),onClick:()=>setF(p=>({...p,allDay:!p.allDay,time:''}))},f.allDay?'✓ 終日':'終日'),
+      !f.allDay&&h('input',{className:'field',type:'time',style:{margin:0,flex:1},value:f.time,onChange:e=>sf('time')(e.target.value)}),
+    ),
+    h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',margin:'4px 0'}},'👤 誰の予定？'),
+    h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+      members.map(mm=>h('button',{key:mm.id,onClick:()=>sf('memberId')(mm.id),
+        style:{padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.memberId===mm.id?mm.color:'#E5E5E5',
+          background:f.memberId===mm.id?mm.color+'22':'#fff',
+          color:f.memberId===mm.id?mm.color:'#AAA',transition:'all .12s'}
+      },mm.emoji+' '+mm.name))
+    ),
+    h('input',{className:'field',style:{margin:'4px 0 0'},placeholder:'メモ（任意）',maxLength:200,value:f.note,onChange:e=>sf('note')(e.target.value)}),
+    h('div',{style:{display:'flex',gap:8,marginTop:4}},
+      h('button',{onClick:save,style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13}},'✓ 保存'),
+      h('button',{onClick:()=>setEditing(false),style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13}},'✕'),
+    ),
+  );
+
   return h('div',{className:compact?'m-row':'ev-row'},
     h('span',{style:{fontSize:20,flexShrink:0}},m?.emoji),
-    h('div',{style:{flex:1,minWidth:0}},
-      h('div',{style:{fontSize:14,fontWeight:700}},ev.title),
+    h('div',{style:{flex:1,minWidth:0},onClick:()=>setEditing(true),cursor:'pointer'},
+      h('div',{style:{fontSize:14,fontWeight:700,cursor:'pointer'}},ev.title),
       h('div',{style:{display:'flex',gap:5,marginTop:3,flexWrap:'wrap',alignItems:'center'}},
         compact&&h('span',{style:{fontSize:11,color:'#BBB'}},ev.date),
         ev.allDay?h('span',{className:'badge badge-all'},'終日'):ev.time&&h('span',{className:'badge badge-t'},'🕐 '+ev.time),
         h('span',{style:{fontSize:11,fontWeight:800,color:m?.color}},m?.name),
       ),
-      ev.note&&!compact&&h('div',{style:{fontSize:12,color:'#AAA',marginTop:2}},ev.note),
+      ev.note&&h('div',{style:{fontSize:12,color:'#AAA',marginTop:2}},ev.note),
     ),
+    h('button',{style:{fontSize:13,padding:'4px 8px',borderRadius:10,background:'#F5F5F5',color:'#AAA',fontWeight:700,flexShrink:0,marginRight:4},onClick:()=>setEditing(true)},'✏️'),
     h('button',{className:'del',onClick:()=>onDel(ev.id)},'✕'),
   );
 }
+
 
 // ═══════════════════════ BUDGET ══════════════════════════════════════════════
 const BCAT_ICONS = {食費:'🍽',日用品:'🧴',交通費:'🚃',娯楽:'🎮',医療:'💊',教育:'📚',その他:'📦'};
