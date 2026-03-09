@@ -725,31 +725,34 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
 function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
   const m = members.find(x => x.id===item.memberId) ?? members[0];
   const cat = shopCats.find(c => c.id===item.catId) ?? shopCats[0];
-  const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState(item.text);
-  const [editCatId, setEditCatId] = useState(item.catId);
+  const [editing,    setEditing]    = useState(false);
+  const [editText,   setEditText]   = useState(item.text);
+  const [editCatId,  setEditCatId]  = useState(item.catId);
+  const [editMemId,  setEditMemId]  = useState(item.memberId);
   const inputRef = useRef(null);
 
-  const startEdit = e => { e.stopPropagation(); setEditText(item.text); setEditCatId(item.catId); setEditing(true); setTimeout(()=>inputRef.current?.focus(),80); };
-  const saveEdit  = () => {
+  const startEdit = e => {
+    e.stopPropagation();
+    setEditText(item.text); setEditCatId(item.catId); setEditMemId(item.memberId);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 80);
+  };
+  const saveEdit = () => {
     const t = editText.trim();
-    if (t) onEdit(item.id, { text:t, catId:editCatId });
+    if (t) onEdit(item.id, { text:t, catId:editCatId, memberId:editMemId });
     setEditing(false);
   };
   const cancelEdit = () => setEditing(false);
 
   if (editing) return h('div', { className:'shop-item', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
-    // テキスト編集
-    h('div', { style:{display:'flex',gap:8,alignItems:'center'} },
-      h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1,fontSize:15},
-        value:editText, onChange:e=>setEditText(e.target.value),
-        onKeyDown:e=>{ if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit(); }
-      }),
-    ),
+    h('input', { ref:inputRef, className:'field', style:{margin:0,fontSize:15},
+      value:editText, onChange:e=>setEditText(e.target.value),
+      onKeyDown:e=>{ if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit(); }
+    }),
     // カテゴリ選択
-    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap'} },
-      shopCats.map(c => h('button', { key:c.id,
-        onClick:()=>setEditCatId(c.id),
+    h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '🏪 カテゴリ'),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
+      shopCats.map(c => h('button', { key:c.id, onClick:()=>setEditCatId(c.id),
         style:{
           padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
           borderColor: editCatId===c.id ? c.color : '#E5E5E5',
@@ -759,7 +762,19 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
         }
       }, c.name))
     ),
-    // 保存・キャンセル
+    // 担当者選択
+    h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '👤 担当'),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
+      members.map(m => h('button', { key:m.id, onClick:()=>setEditMemId(m.id),
+        style:{
+          padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor: editMemId===m.id ? m.color : '#E5E5E5',
+          background:  editMemId===m.id ? m.color+'22' : '#fff',
+          color:       editMemId===m.id ? m.color : '#AAA',
+          transition:'all .12s',
+        }
+      }, m.emoji+' '+m.name))
+    ),
     h('div', { style:{display:'flex',gap:8} },
       h('button', { onClick:saveEdit,
         style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13} },
@@ -774,13 +789,11 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
     h('button', { className:'chk'+(item.done?' on':''), onClick:()=>onToggle(item.id) },
       item.done && h('span', { className:'chk-icon' }, '✓')),
     h('span', { style:{fontSize:19,flexShrink:0} }, m?.emoji),
-    // テキストをタップで編集開始
     h('span', { className:'shop-txt'+(item.done?' done':''),
       onClick: item.done ? undefined : startEdit,
       style:{ cursor: item.done ? 'default' : 'pointer', flex:1 },
       title: item.done ? '' : 'タップして編集',
     }, item.text),
-    // カテゴリバッジ（タップで編集）
     cat && !item.done && h('button', { onClick:startEdit,
       style:{
         fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:10,
@@ -792,12 +805,12 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
     h('button', { className:'del', onClick:()=>onDel(item.id) }, '✕'),
   );
 }
-
 // ═══════════════════════ CALENDAR ════════════════════════════════════════════
 function CalTab({ events, setEvents, members }) {
-  const [cur,  setCur]  = useState(new Date());
-  const [sel,  setSel]  = useState(null);
-  const [show, setShow] = useState(false);
+  const [cur,      setCur]      = useState(new Date());
+  const [sel,      setSel]      = useState(null);
+  const [show,     setShow]     = useState(false);
+  const [showAll,  setShowAll]  = useState(false);
   const [form, setForm] = useState({ title:'', date:'', time:'', allDay:true, memberId:members[0]?.id??'', note:'' });
   const sf = k => v => setForm(p => ({...p,[k]:v}));
   const now = new Date();
@@ -819,7 +832,8 @@ function CalTab({ events, setEvents, members }) {
       return(a.time||'').localeCompare(b.time||'');
     });
   };
-  const upcoming=events.filter(e=>e.date>=today()).sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):(a.time||'').localeCompare(b.time||'')).slice(0,7);
+  const upcoming = events.filter(e=>e.date>=today()).sort((a,b)=>a.date!==b.date?a.date.localeCompare(b.date):(a.time||'').localeCompare(b.time||''));
+  const upcomingVisible = showAll ? upcoming : upcoming.slice(0, 7);
 
   return h(Fragment,null,
     h('div',{className:'cal-nav'},
@@ -867,8 +881,19 @@ function CalTab({ events, setEvents, members }) {
       h('button',{className:'btn btn-grad',onClick:addEv},'追加する'),
     ),
     h('div',{className:'card'},
-      h('div',{className:'card-label'},'直近の予定'),
-      upcoming.length===0?h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'直近の予定はありません'):upcoming.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,compact:true})),
+      h('div',{style:{display:'flex',alignItems:'center',marginBottom:8}},
+        h('div',{className:'card-label',style:{margin:0,flex:1}},'直近の予定'),
+        upcoming.length > 0 && h('span',{style:{fontSize:11,color:'#AAA',fontWeight:700}}, upcoming.length+'件'),
+      ),
+      upcoming.length===0
+        ? h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'直近の予定はありません')
+        : h(Fragment, null,
+            upcomingVisible.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,compact:true})),
+            upcoming.length > 7 && h('button',{
+              className:'btn btn-ghost', style:{marginTop:8,fontSize:13},
+              onClick:()=>setShowAll(p=>!p),
+            }, showAll ? '▲ 折りたたむ' : `▼ さらに${upcoming.length-7}件を表示`),
+          ),
     ),
   );
 }
