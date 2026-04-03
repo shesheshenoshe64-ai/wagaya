@@ -1,0 +1,87 @@
+name: LINE Daily Notify
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send LINE notification
+        env:
+          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+          FIREBASE_DB_URL: ${{ secrets.FIREBASE_DB_URL }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install firebase-admin requests -q
+          python3 << 'PYEOF'
+          import json, os, datetime, requests, firebase_admin
+          from firebase_admin import credentials, db
+
+          sa = json.loads(os.environ['FIREBASE_SERVICE_ACCOUNT'])
+          cred = credentials.Certificate(sa)
+          firebase_admin.initialize_app(cred, {'databaseURL': os.environ['FIREBASE_DB_URL']})
+
+          jst = datetime.timezone(datetime.timedelta(hours=9))
+          today = datetime.datetime.now(jst).strftime('%Y-%m-%d')
+          tomorrow = (datetime.datetime.now(jst) + datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+
+          root = db.reference('wagaya/v1')
+          events   = root.child('events').get() or {}
+          shopping = root.child('shopping').get() or {}
+          members  = root.child('members').get() or {}
+
+          mem_map = {v['id']: v.get('emoji','') + v.get('name','')
+                     for v in members.values() if isinstance(v, dict)}
+
+          lines = ['🏠 わが家の手帳\n']
+
+          today_evs = sorted(
+              [v for v in events.values() if isinstance(v,dict) and v.get('date')==today],
+              key=lambda x: x.get('time',''))
+          if today_evs:
+              lines.append('📅 今日の予定')
+              for e in today_evs:
+                  t = e.get('time','') or '終日'
+                  who = mem_map.get(e.get('memberId',''), '')
+                  lines.append(f"  {t}　{e['title']}　{who}")
+          else:
+              lines.append('📅 今日の予定はありません')
+
+          tmr_evs = sorted(
+              [v for v in events.values() if isinstance(v,dict) and v.get('date')==tomorrow],
+              key=lambda x: x.get('time',''))
+          if tmr_evs:
+              lines.append(f'\n📅 明日の予定')
+              for e in tmr_evs:
+                  t = e.get('time','') or '終日'
+                  who = mem_map.get(e.get('memberId',''), '')
+                  lines.append(f"  {t}　{e['title']}　{who}")
+
+          pending = [v for v in shopping.values()
+                     if isinstance(v,dict) and not v.get('done')]
+          if pending:
+              lines.append(f'\n🛒 買い物リスト（残り{len(pending)}件）')
+              for item in pending[:5]:
+                  who = mem_map.get(item.get('memberId',''), '')
+                  lines.append(f"  ・{item['text']}　{who}")
+              if len(pending) > 5:
+                  lines.append(f"  …他{len(pending)-5}件")
+
+          msg = '\n'.join(lines)
+          res = requests.post(
+              'https://api.line.me/v2/bot/message/push',
+              headers={
+                  'Authorization': f"Bearer {os.environ['LINE_CHANNEL_TOKEN']}",
+                  'Content-Type': 'application/json'
+              },
+              json={
+                  'to': os.environ['LINE_USER_ID'],
+                  'messages': [{'type': 'text', 'text': msg}]
+              }
+          )
+          print('status:', res.status_code, res.text)
+          PYEOF
