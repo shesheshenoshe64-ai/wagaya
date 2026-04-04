@@ -2,7 +2,7 @@ name: LINE Daily Notify
 
 on:
   schedule:
-    - cron: '0 21 * * *'
+    - cron: '45 20 * * *'  # UTC 20:45 = JST 5:45にキュー投入
   workflow_dispatch:
 
 jobs:
