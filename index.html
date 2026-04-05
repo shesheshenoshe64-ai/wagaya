@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="UTF-8"/>
@@ -139,7 +138,7 @@ a{color:inherit}
 .m-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F2F2F2}
 .m-row:last-child{border-bottom:none}
 .sep{display:flex;align-items:center;gap:8px;margin:12px 0 10px;font-size:10px;font-weight:800;color:#BBB;letter-spacing:.8px;text-transform:uppercase}
-.sep::before,.sep::after{content:’’;flex:1;height:1px;background:#EBEBEB}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:#EBEBEB}
 .empty{text-align:center;padding:26px 0 18px;color:#CCC;font-size:14px;line-height:1.9}
 .empty-ico{font-size:36px;display:block;margin-bottom:6px}
 .type-row{display:flex;gap:8px;margin-bottom:10px}
@@ -180,6 +179,17 @@ a{color:inherit}
 .arc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #F2F2F2;opacity:.6}
 .arc-row:last-child{border-bottom:none}
 .board-post-card{background:#fff;border-radius:18px;padding:14px;margin-bottom:0;box-shadow:0 2px 12px rgba(0,0,0,.055);width:100%}
+.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease}
+.notif-card{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:430px;padding-bottom:max(16px,env(safe-area-inset-bottom));animation:slideUp .25s cubic-bezier(.25,1.4,.5,1)}
+.notif-hdr{display:flex;align-items:center;gap:10px;padding:18px 16px 12px;border-bottom:1px solid #F0F0F0}
+.notif-close{color:#CCC;font-size:18px;padding:4px 8px;border-radius:8px}
+.notif-body{padding:12px 16px 0;max-height:55dvh;overflow-y:auto}
+.notif-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #F8F8F8}
+.notif-row:last-child{border-bottom:none}
+.notif-sub{padding:4px 0 4px 8px;opacity:.75}
+.notif-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;margin-top:1px}
+.notif-text{font-size:14px;line-height:1.5;font-weight:600}
+.notif-sub .notif-text{font-size:13px;font-weight:500;color:#666}
 .setup-bg{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;background:linear-gradient(160deg,#FFF5F8 0%,#F0EFFE 100%);padding:30px 20px 40px;overflow-y:auto}
 .setup-logo{font-size:56px;margin-bottom:10px;line-height:1}
 .setup-title{font-size:24px;font-weight:800;background:linear-gradient(135deg,#FF8050,#FF5E8A,#A855F7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
@@ -198,7 +208,6 @@ a{color:inherit}
 .instruction-text b{color:#FF5E8A}
 .link-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-top:4px}
 </style>
-
 </head>
 <body>
 <div id="root"></div>
@@ -489,6 +498,75 @@ function MainApp({ db, onReset }) {
   const [shopCats, setShopCats] = useState(DEF_CATS);
   const [notes,    setNotes]    = useState([]);
 
+  // ── お知らせポップアップ ──────────────────────────────────────────────────
+  const [popup,       setPopup]       = useState(null);  // { items: [{icon,text}] }
+  const notifiedRef   = useRef(false);
+  const prevShopRef   = useRef(null);   // 前回の買い物リスト（localStorage）
+  const LS_SHOP_SNAP  = 'wagaya_shop_snap_v1';
+
+  // 初回同期完了時にポップアップ表示
+  useEffect(() => {
+    if (!synced || notifiedRef.current) return;
+    notifiedRef.current = true;
+
+    const todayStr = today();
+    const items = [];
+
+    // ① 今日の予定
+    const todayEvs = events.filter(e => e.date === todayStr)
+      .sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    if (todayEvs.length > 0) {
+      items.push({ icon:'📅', text:`今日の予定 ${todayEvs.length}件` });
+      todayEvs.forEach(e => {
+        const timeStr = e.allDay ? '終日' : (e.time || '');
+        items.push({ icon:'　', text: (timeStr ? timeStr+'　' : '') + e.title, sub:true });
+      });
+    }
+
+    // ② 未完了の買い物
+    const pending = shopping.filter(i => !i.done);
+    if (pending.length > 0) {
+      items.push({ icon:'🛒', text:`買い物リスト 残り${pending.length}件` });
+    }
+
+    // ③ 前回訪問から追加された買い物（他の家族が追加した可能性）
+    try {
+      const snapRaw = localStorage.getItem(LS_SHOP_SNAP);
+      if (snapRaw) {
+        const snap = JSON.parse(snapRaw);
+        const prevIds = new Set(snap);
+        const newItems = shopping.filter(i => !i.done && !prevIds.has(i.id));
+        if (newItems.length > 0) {
+          items.push({ icon:'✨', text:`前回から${newItems.length}件追加されました` });
+          newItems.slice(0,3).forEach(i => {
+            const m = members.find(x=>x.id===i.memberId);
+            items.push({ icon:'　', text: i.text + (m ? `（${m.emoji}${m.name}）` : ''), sub:true });
+          });
+          if (newItems.length > 3) items.push({ icon:'　', text:`…他${newItems.length-3}件`, sub:true });
+        }
+      }
+    } catch {}
+
+    // 買い物IDスナップショットを保存
+    try {
+      localStorage.setItem(LS_SHOP_SNAP, JSON.stringify(shopping.map(i=>i.id)));
+    } catch {}
+
+    // 掲示板の未読
+    const unread = notes.filter(n => !n.archived);
+    if (unread.length > 0) {
+      items.push({ icon:'📝', text:`掲示板の未読メッセージ ${unread.length}件` });
+    }
+
+    if (items.length > 0) setPopup({ items });
+  }, [synced]);
+
+  // 買い物変化時にスナップ更新
+  useEffect(() => {
+    if (!synced) return;
+    try { localStorage.setItem(LS_SHOP_SNAP, JSON.stringify(shopping.map(i=>i.id))); } catch {}
+  }, [shopping]);
+
   // Track writes to avoid echo
   const writing = useRef({});
 
@@ -537,6 +615,7 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('notes',    notes);    }, [notes]);
 
   const TABS = [
+    { k:'menu',   label:'🍽 献立' },
     { k:'shop',   label:'🛒 買い物' },
     { k:'cal',    label:'📅 予定' },
     { k:'budget', label:'💰 家計' },
@@ -545,6 +624,30 @@ function MainApp({ db, onReset }) {
   ];
 
   return h('div', { className:'shell' },
+
+    // ── お知らせポップアップ ────────────────────────────────────────────────
+    popup && h('div', { className:'notif-overlay', onClick:()=>setPopup(null) },
+      h('div', { className:'notif-card', onClick:e=>e.stopPropagation() },
+        h('div', { className:'notif-hdr' },
+          h('span', { style:{fontSize:22} }, '🏠'),
+          h('div', { style:{flex:1,fontWeight:800,fontSize:16} }, 'わが家のお知らせ'),
+          h('button', { className:'notif-close', onClick:()=>setPopup(null) }, '✕'),
+        ),
+        h('div', { className:'notif-body' },
+          popup.items.map((item, i) =>
+            h('div', { key:i, className:'notif-row'+(item.sub?' notif-sub':'') },
+              h('span', { className:'notif-icon' }, item.icon),
+              h('span', { className:'notif-text' }, item.text),
+            )
+          )
+        ),
+        h('button', {
+          className:'btn btn-grad',
+          style:{margin:'12px 16px 0',width:'calc(100% - 32px)',boxShadow:'none'},
+          onClick:()=>setPopup(null),
+        }, 'OK'),
+      ),
+    ),
     // Header
     h('div', { className:'hdr' },
       h('div', { className:'hdr-top' },
@@ -564,11 +667,169 @@ function MainApp({ db, onReset }) {
     ),
     // Content
     h('div', { className:'content' },
+      tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
       tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
       tab==='cal'    && h(CalTab,    { events, setEvents, members }),
       tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
       tab==='board'  && h(BoardTab,  { notes, setNotes, members }),
       tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
+    ),
+  );
+}
+
+const RECIPES = [{"name":"肉じゃが","cat":"煮物","ings":[["じゃがいも",3,"個"],["牛肉",150,"g"],["玉ねぎ",1,"個"],["にんじん",1,"本"],["糸こんにゃく",1,"袋"],["醤油",3,"大さじ"],["みりん",3,"大さじ"],["砂糖",2,"大さじ"],["だし",200,"ml"]],"steps":["肉と野菜を一口大に切る","油で肉を炒め野菜を加える","だし・調味料を加えて中火で20分煮る"]},{"name":"唐揚げ","cat":"揚げ物","ings":[["鶏もも肉",400,"g"],["醤油",2,"大さじ"],["酒",2,"大さじ"],["にんにく",1,"かけ"],["しょうが",1,"かけ"],["片栗粉",4,"大さじ"]],"steps":["鶏肉を一口大に切り調味料で15分漬ける","片栗粉をまぶす","170℃の油で4分・180℃で1分揚げる"]},{"name":"麻婆豆腐","cat":"中華","ings":[["豆腐",1,"丁"],["豚ひき肉",100,"g"],["豆板醤",1,"小さじ"],["甜麺醤",1,"大さじ"],["にんにく",1,"かけ"],["しょうが",1,"かけ"],["鶏がらスープ",150,"ml"],["片栗粉",1,"大さじ"],["ごま油",1,"小さじ"]],"steps":["豆腐を2cm角に切り茹でる","ひき肉と調味料を炒める","スープと豆腐を加え水溶き片栗粉でとろみをつける"]},{"name":"カレーライス","cat":"カレー","ings":[["鶏もも肉",300,"g"],["じゃがいも",3,"個"],["にんじん",1,"本"],["玉ねぎ",2,"個"],["カレールー",4,"かけ"],["水",700,"ml"],["サラダ油",1,"大さじ"]],"steps":["野菜と肉を切る","油で炒め水を加えて15分煮る","火を止めルーを溶かし5分煮る"]},{"name":"豚の生姜焼き","cat":"炒め物","ings":[["豚ロース",300,"g"],["玉ねぎ",1,"個"],["醤油",2,"大さじ"],["みりん",2,"大さじ"],["酒",1,"大さじ"],["しょうが",1,"かけ"],["サラダ油",1,"大さじ"]],"steps":["豚肉と調味料を混ぜ10分漬ける","玉ねぎを炒め豚肉を加える","強火で炒め合わせる"]},{"name":"ハンバーグ","cat":"洋食","ings":[["合いびき肉",300,"g"],["玉ねぎ",0.5,"個"],["パン粉",3,"大さじ"],["牛乳",3,"大さじ"],["卵",1,"個"],["ケチャップ",2,"大さじ"],["ウスターソース",1,"大さじ"]],"steps":["玉ねぎをみじん切りして炒め冷ます","全材料をよく混ぜて成形する","フライパンで両面焼きソースをかける"]},{"name":"親子丼","cat":"丼物","ings":[["鶏もも肉",200,"g"],["卵",3,"個"],["玉ねぎ",1,"個"],["だし",150,"ml"],["醤油",2,"大さじ"],["みりん",2,"大さじ"],["砂糖",1,"小さじ"]],"steps":["鶏肉と玉ねぎを切る","だしと調味料で鶏肉を煮る","卵でとじてご飯にのせる"]},{"name":"豚汁","cat":"汁物","ings":[["豚バラ肉",150,"g"],["大根",0.25,"本"],["にんじん",0.5,"本"],["ごぼう",0.5,"本"],["こんにゃく",0.5,"枚"],["味噌",3,"大さじ"],["だし",600,"ml"],["ごま油",1,"小さじ"]],"steps":["材料を切る","ごま油で豚肉と野菜を炒める","だしを加え煮えたら味噌を溶く"]},{"name":"野菜炒め","cat":"炒め物","ings":[["キャベツ",0.25,"個"],["もやし",1,"袋"],["にんじん",0.5,"本"],["豚バラ肉",150,"g"],["醤油",1,"大さじ"],["オイスターソース",1,"大さじ"]],"steps":["野菜と肉を切る","強火で肉を炒め野菜を加える","調味料を加えてさっと炒める"]},{"name":"鮭のムニエル","cat":"魚料理","ings":[["鮭",2,"切れ"],["小麦粉",2,"大さじ"],["バター",20,"g"],["レモン",0.5,"個"]],"steps":["鮭に塩コショウして小麦粉をまぶす","バターで両面を焼く","レモンを絞りパセリをかける"]},{"name":"チャーハン","cat":"ご飯","ings":[["ご飯",2,"人分"],["卵",2,"個"],["チャーシュー",80,"g"],["長ねぎ",0.3,"本"],["醤油",1,"大さじ"],["ごま油",1,"大さじ"]],"steps":["ご飯は冷やご飯を使う","強火で卵を炒めご飯を加える","具材と調味料を加えて炒める"]},{"name":"豚キムチ炒め","cat":"炒め物","ings":[["豚バラ肉",200,"g"],["キムチ",150,"g"],["豆腐",0.5,"丁"],["ごま油",1,"大さじ"],["醤油",1,"大さじ"]],"steps":["豚肉を炒める","キムチを加えて炒める","豆腐を崩しながら加え調味する"]},{"name":"オムライス","cat":"洋食","ings":[["ご飯",2,"人分"],["鶏もも肉",100,"g"],["玉ねぎ",0.5,"個"],["卵",4,"個"],["ケチャップ",3,"大さじ"],["バター",20,"g"]],"steps":["鶏肉と玉ねぎをバターで炒めケチャップライスを作る","卵を薄く焼く","ライスを包む"]},{"name":"筑前煮","cat":"煮物","ings":[["鶏もも肉",250,"g"],["れんこん",0.5,"節"],["ごぼう",0.5,"本"],["にんじん",1,"本"],["こんにゃく",0.5,"枚"],["干ししいたけ",4,"枚"],["醤油",3,"大さじ"],["みりん",3,"大さじ"],["砂糖",2,"大さじ"],["だし",200,"ml"]],"steps":["材料を乱切りにする","油で炒め調味料を加える","落し蓋をして20分煮る"]},{"name":"塩サバ焼き","cat":"魚料理","ings":[["塩サバ",2,"切れ"],["大根",5,"cm"],["レモン",0.5,"個"]],"steps":["グリルを予熱する","サバを皮目から7分焼く","大根おろしとレモンを添える"]},{"name":"餃子","cat":"中華","ings":[["餃子の皮",30,"枚"],["豚ひき肉",200,"g"],["キャベツ",0.25,"個"],["ニラ",0.5,"束"],["にんにく",1,"かけ"],["しょうが",1,"かけ"],["醤油",1,"大さじ"],["ごま油",1,"大さじ"]],"steps":["野菜をみじん切りにして塩でもむ","ひき肉と混ぜて皮で包む","フライパンで焼き水を加えて蒸し焼きにする"]},{"name":"肉豆腐","cat":"煮物","ings":[["牛肉",200,"g"],["豆腐",1,"丁"],["長ねぎ",1,"本"],["醤油",3,"大さじ"],["みりん",2,"大さじ"],["砂糖",1,"大さじ"],["だし",150,"ml"]],"steps":["豆腐を切る","だしと調味料を煮立てる","肉と豆腐・ねぎを加えて5分煮る"]},{"name":"鶏のトマト煮","cat":"洋食","ings":[["鶏もも肉",300,"g"],["トマト缶",1,"缶"],["玉ねぎ",1,"個"],["にんにく",1,"かけ"],["オリーブオイル",1,"大さじ"]],"steps":["鶏肉に塩コショウして焼く","玉ねぎとにんにくを炒める","トマト缶を加えて20分煮る"]},{"name":"ポテトサラダ","cat":"副菜","ings":[["じゃがいも",3,"個"],["にんじん",0.3,"本"],["きゅうり",1,"本"],["ハム",3,"枚"],["マヨネーズ",3,"大さじ"],["酢",1,"小さじ"]],"steps":["じゃがいもとにんじんを茹でてつぶす","きゅうりとハムを切る","マヨネーズで和える"]},{"name":"ほうれん草のおひたし","cat":"副菜","ings":[["ほうれん草",1,"束"],["醤油",1,"大さじ"],["だし",2,"大さじ"],["かつお節",1,"袋"]],"steps":["ほうれん草を茹でて水にさらす","絞って切る","だし醤油をかけてかつお節を添える"]},{"name":"茶碗蒸し","cat":"蒸し物","ings":[["卵",3,"個"],["だし",400,"ml"],["醤油",1,"大さじ"],["みりん",1,"大さじ"],["鶏もも肉",80,"g"],["えび",4,"尾"],["しいたけ",2,"枚"]],"steps":["卵とだしを混ぜて漉す","具材を器に入れ卵液を注ぐ","蒸し器で15分蒸す"]},{"name":"豆腐ステーキ","cat":"ヘルシー","ings":[["木綿豆腐",1,"丁"],["醤油",2,"大さじ"],["みりん",1,"大さじ"],["にんにく",1,"かけ"],["ごま油",1,"大さじ"],["長ねぎ",0.3,"本"]],"steps":["豆腐を厚切りにして水切りする","ごま油でこんがり焼く","調味料を合わせてかける"]},{"name":"アクアパッツァ","cat":"洋食","ings":[["白身魚",2,"切れ"],["あさり",200,"g"],["プチトマト",10,"個"],["にんにく",2,"かけ"],["白ワイン",80,"ml"],["オリーブオイル",2,"大さじ"]],"steps":["魚に塩コショウする","オリーブオイルとにんにくで魚を焼く","あさりとトマト・白ワインを加え蒸し焼きにする"]},{"name":"春巻き","cat":"中華","ings":[["春巻きの皮",10,"枚"],["豚ひき肉",150,"g"],["春雨",30,"g"],["キャベツ",0.25,"個"],["にんじん",0.5,"本"],["オイスターソース",1,"大さじ"],["醤油",1,"大さじ"]],"steps":["具材を炒めて味付けし冷ます","春巻きの皮で包む","170℃の油で揚げる"]},{"name":"炊き込みご飯","cat":"ご飯","ings":[["米",2,"合"],["鶏もも肉",150,"g"],["にんじん",0.5,"本"],["ごぼう",0.3,"本"],["しいたけ",3,"枚"],["醤油",2,"大さじ"],["みりん",1,"大さじ"]],"steps":["米を洗い調味料を加える","具材を切って上にのせる","炊飯器で普通に炊く"]}];
+
+// ═══════════════════════ MENU SUGGEST ═══════════════════════════════════════
+const CAT_COLORS = {煮物:'#FF8C42',揚げ物:'#E84393',中華:'#C0392B',カレー:'#F39C12',炒め物:'#27AE60',洋食:'#2980B9',丼物:'#8E44AD',汁物:'#16A085',魚料理:'#1ABC9C',ご飯:'#D35400',副菜:'#7F8C8D',蒸し物:'#2C3E50',ヘルシー:'#27AE60'};
+
+function fmtAmt(base, servings, baseServings) {
+  const v = base * (servings / baseServings);
+  if (v === 0) return '少々';
+  if (Number.isInteger(v)) return String(v);
+  // Round to 1 decimal
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : String(r);
+}
+
+function MenuTab({ shopping, setShopping, shopCats, members }) {
+  const [recipe,    setRecipe]    = useState(null);
+  const [servings,  setServings]  = useState(4);
+  const [baseServ,  setBaseServ]  = useState(4);
+  const [added,     setAdded]     = useState(false);
+  const [history,   setHistory]   = useState([]);
+  const [showSteps, setShowSteps] = useState(false);
+
+  const pick = () => {
+    // avoid recent repeats
+    const pool = RECIPES.filter(r => !history.slice(-3).includes(r.name));
+    const r = pool[Math.floor(Math.random() * pool.length)];
+    setRecipe(r);
+    setBaseServ(4);
+    setServings(4);
+    setAdded(false);
+    setShowSteps(false);
+    setHistory(h => [...h.slice(-9), r.name]);
+  };
+
+  const addToShop = () => {
+    if (!recipe) return;
+    const defaultCat = shopCats[0]?.id ?? '';
+    const defaultMem = members[0]?.id ?? '';
+    const newItems = recipe.ings.map(([name]) => ({
+      id: uid(), text: name, memberId: defaultMem,
+      catId: defaultCat, done: false,
+    }));
+    setShopping(p => {
+      // dedupe: skip already-existing items
+      const existing = new Set(p.map(i => i.text));
+      return [...p, ...newItems.filter(i => !existing.has(i.text))];
+    });
+    setAdded(true);
+  };
+
+  const colBase = recipe ? (CAT_COLORS[recipe.cat] ?? '#FF5E8A') : '#FF5E8A';
+
+  return h(Fragment, null,
+
+    // ── ヘッダー ──────────────────────────────────────────────────────────────
+    h('div', { style:{textAlign:'center',marginBottom:16} },
+      h('div', { style:{fontSize:36,marginBottom:4} }, '🍽'),
+      h('div', { style:{fontSize:18,fontWeight:800,color:'#333'} }, '今日の献立を提案'),
+      h('div', { style:{fontSize:12,color:'#AAA',marginTop:2} }, 'ランダムで1品提案します'),
+    ),
+
+    // ── 提案ボタン ────────────────────────────────────────────────────────────
+    h('button', {
+      className: 'btn btn-grad',
+      style: { marginBottom:12, fontSize:16, boxShadow:'0 4px 18px rgba(255,94,138,.32)' },
+      onClick: pick,
+    }, recipe ? '🔀 別の献立を提案' : '✨ 献立を提案する'),
+
+    // ── レシピカード ──────────────────────────────────────────────────────────
+    recipe && h('div', { className:'card fi', style:{borderTop:`4px solid ${colBase}`} },
+
+      // タイトル行
+      h('div', { style:{display:'flex',alignItems:'center',gap:10,marginBottom:14} },
+        h('div', { style:{
+          padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:800,
+          background:colBase+'18',color:colBase,
+        }}, recipe.cat),
+        h('div', { style:{fontSize:20,fontWeight:800,flex:1} }, recipe.name),
+      ),
+
+      // 人数スライダー
+      h('div', { className:'card', style:{background:'#FAFAFA',padding:'12px 14px',marginBottom:12} },
+        h('div', { style:{display:'flex',alignItems:'center',gap:12,marginBottom:8} },
+          h('span', { style:{fontSize:13,fontWeight:800,color:'#888'} }, '👨‍👩‍👧‍👦 人数'),
+          h('button', {
+            onClick: () => setServings(s => Math.max(1,s-1)),
+            style:{width:32,height:32,borderRadius:16,background:'#FF5E8A18',color:'#FF5E8A',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},
+          }, '−'),
+          h('span', { style:{fontSize:22,fontWeight:800,minWidth:28,textAlign:'center'} }, servings),
+          h('button', {
+            onClick: () => setServings(s => Math.min(10,s+1)),
+            style:{width:32,height:32,borderRadius:16,background:'#FF5E8A18',color:'#FF5E8A',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},
+          }, '＋'),
+          h('span', { style:{fontSize:12,color:'#BBB'} }, '人前'),
+        ),
+      ),
+
+      // 材料リスト
+      h('div', { className:'card-label' }, '📦 材料'),
+      h('div', { style:{marginBottom:14} },
+        recipe.ings.map(([name, baseAmt, unit], i) =>
+          h('div', { key:i, style:{
+            display:'flex',justifyContent:'space-between',alignItems:'center',
+            padding:'7px 0',borderBottom:'1px solid #F5F5F5',
+          }},
+            h('span', { style:{fontSize:14,fontWeight:600} }, name),
+            h('span', { style:{fontSize:13,color:'#FF5E8A',fontWeight:800} },
+              unit === '人分' ? servings+'人分'
+              : unit === '適量' ? '適量'
+              : fmtAmt(baseAmt, servings, baseServ) + ' ' + unit
+            ),
+          )
+        )
+      ),
+
+      // レシピ手順（折りたたみ）
+      h('button', {
+        className: 'btn btn-ghost',
+        style: {marginBottom:12, fontSize:13},
+        onClick: () => setShowSteps(p=>!p),
+      }, showSteps ? '▲ 手順を隠す' : '▼ 作り方を見る'),
+
+      showSteps && h('div', { className:'fi' },
+        recipe.steps.map((step, i) =>
+          h('div', { key:i, style:{display:'flex',gap:10,marginBottom:10,alignItems:'flex-start'} },
+            h('div', { style:{
+              width:24,height:24,borderRadius:12,flexShrink:0,
+              background:'linear-gradient(135deg,#FF8050,#FF5E8A)',
+              color:'#fff',fontSize:12,fontWeight:800,
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}, i+1),
+            h('div', { style:{fontSize:14,lineHeight:1.7,paddingTop:2} }, step),
+          )
+        )
+      ),
+
+      // 買い物メモ追加ボタン
+      added
+        ? h('div', { style:{
+            padding:'12px',borderRadius:14,background:'#E8F5E9',
+            color:'#2E7D32',fontWeight:800,fontSize:14,textAlign:'center',
+          }}, '✅ 買い物メモに追加しました！')
+        : h('button', {
+            className: 'btn btn-purple',
+            style: {boxShadow:'none'},
+            onClick: addToShop,
+          }, '🛒 材料を買い物メモに追加する'),
+    ),
+
+    // ── 空状態 ────────────────────────────────────────────────────────────────
+    !recipe && h('div', { className:'empty', style:{marginTop:16} },
+      h('span', { className:'empty-ico' }, '👆'),
+      'ボタンを押すと\nランダムで1品提案します',
     ),
   );
 }
@@ -1458,6 +1719,5 @@ function CfgTab({ members, setMembers, onReset }) {
 
 createRoot(document.getElementById('root')).render(h(App, null));
 </script>
-
 </body>
 </html>
