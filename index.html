@@ -21,6 +21,7 @@ a{color:inherit}
 
 @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes rouletteTick{0%{transform:scale(1.15);opacity:.7}100%{transform:scale(1);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes checkBounce{0%{transform:scale(0);opacity:0}55%{transform:scale(1.35)}100%{transform:scale(1);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -54,11 +55,6 @@ a{color:inherit}
 
 /* Field */
 .field{width:100%;padding:12px 14px;border:2px solid #EBEBEB;border-radius:12px;font-size:15px;background:#FAFAFA;color:#1E1E1E;margin-bottom:10px;transition:border-color .15s}
-.mic-wrap{position:relative;display:flex;align-items:center;margin-bottom:10px}
-.mic-wrap .field{margin-bottom:0;flex:1;padding-right:44px}
-.mic-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:#F5F5F5;color:#AAA;transition:all .15s;flex-shrink:0}
-.mic-btn.listening{background:#FF5E8A22;color:#FF5E8A;animation:micPulse .8s ease-in-out infinite}
-@keyframes micPulse{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.15)}}
 .field:focus{border-color:#FF5E8A;background:#fff}
 .field-mono{font-family:monospace;font-size:13px;word-break:break-all}
 
@@ -256,48 +252,6 @@ const cleanDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
 const cleanTime = t => /^\d{2}:\d{2}$/.test(t) ? t : '';
 const uid = () => crypto.randomUUID();
 
-// ── 音声入力フック ────────────────────────────────────────────────────────────
-function useSpeech(onResult) {
-  const [listening, setListening] = useState(false);
-  const recRef = useRef(null);
-  const supported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
-
-  const toggle = () => {
-    if (!supported) { alert('お使いのブラウザは音声入力に対応していません'); return; }
-    if (listening) {
-      recRef.current?.stop(); setListening(false); return;
-    }
-    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = 'ja-JP'; rec.continuous = false; rec.interimResults = false;
-    rec.onresult = e => {
-      const t = e.results[0][0].transcript;
-      onResult(t);
-      setListening(false);
-    };
-    rec.onerror = () => setListening(false);
-    rec.onend   = () => setListening(false);
-    recRef.current = rec;
-    rec.start(); setListening(true);
-  };
-
-  return { listening, toggle, supported };
-}
-
-// マイクボタン付き入力欄
-function MicField({ value, onChange, placeholder, maxLength, style, inputStyle, multiline }) {
-  const { listening, toggle } = useSpeech(t => onChange(value ? value + t : t));
-  const props = { className:'field', style:{marginBottom:0,...(inputStyle??{})},
-    placeholder, maxLength, value, onChange:e=>onChange(e.target.value) };
-  return h('div', { className:'mic-wrap', style },
-    multiline
-      ? h('textarea', { ...props, style:{...props.style,minHeight:90,resize:'none',flex:1,paddingRight:44} })
-      : h('input',    { ...props, style:{...props.style,flex:1,paddingRight:44} }),
-    h('button', { className:'mic-btn'+(listening?' listening':''), onClick:toggle, type:'button',
-      title: listening ? '停止' : '音声入力' },
-      listening ? '⏹' : '🎤'),
-  );
-}
 const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const vM = m => m&&typeof m.id==='string'&&typeof m.name==='string'&&m.name.length>0;
 const vE = e => e&&typeof e.id==='string'&&typeof e.title==='string';
@@ -746,17 +700,41 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
   const [added,     setAdded]     = useState(false);
   const [history,   setHistory]   = useState([]);
   const [showSteps, setShowSteps] = useState(false);
+  const [rolling,   setRolling]   = useState(false);
+  const [dispName,  setDispName]  = useState('');  // ルーレット中の表示名
+  const timerRef = useRef(null);
 
   const pick = () => {
-    // avoid recent repeats
+    if (rolling) return;
     const pool = RECIPES.filter(r => !history.slice(-3).includes(r.name));
-    const r = pool[Math.floor(Math.random() * pool.length)];
-    setRecipe(r);
-    setBaseServ(4);
-    setServings(4);
+    const final = pool[Math.floor(Math.random() * pool.length)];
+
+    setRolling(true);
     setAdded(false);
     setShowSteps(false);
-    setHistory(h => [...h.slice(-9), r.name]);
+    setRecipe(null);
+
+    // ルーレット演出: 速く→遅くランダム名を表示
+    let count = 0;
+    const total = 18;  // 何回切り替えるか
+    const spin = () => {
+      const rnd = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+      setDispName(rnd.name);
+      count++;
+      const delay = count < 8 ? 80 : count < 14 ? 150 : 280;  // 徐々に遅く
+      if (count < total) {
+        timerRef.current = setTimeout(spin, delay);
+      } else {
+        // 最後に確定
+        setDispName(final.name);
+        setRecipe(final);
+        setBaseServ(4);
+        setServings(4);
+        setHistory(h => [...h.slice(-9), final.name]);
+        setRolling(false);
+      }
+    };
+    timerRef.current = setTimeout(spin, 80);
   };
 
   const addToShop = () => {
@@ -764,11 +742,9 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
     const defaultCat = (shopCats.find(c => c.name === 'スーパー') ?? shopCats[0])?.id ?? '';
     const defaultMem = members[0]?.id ?? '';
     const newItems = recipe.ings.map(([name]) => ({
-      id: uid(), text: name, memberId: defaultMem,
-      catId: defaultCat, done: false,
+      id: uid(), text: name, memberId: defaultMem, catId: defaultCat, done: false,
     }));
     setShopping(p => {
-      // dedupe: skip already-existing items
       const existing = new Set(p.map(i => i.text));
       return [...p, ...newItems.filter(i => !existing.has(i.text))];
     });
@@ -781,33 +757,56 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
 
     // ── ヘッダー ──────────────────────────────────────────────────────────────
     h('div', { style:{textAlign:'center',marginBottom:16} },
-      h('div', { style:{fontSize:36,marginBottom:4} }, '🍽'),
-      h('div', { style:{fontSize:18,fontWeight:800,color:'#333'} }, '今日の献立を提案'),
-      h('div', { style:{fontSize:12,color:'#AAA',marginTop:2} }, 'ランダムで1品提案します'),
+      h('div', { style:{fontSize:36,marginBottom:4} }, '🎰'),
+      h('div', { style:{fontSize:18,fontWeight:800,color:'#333'} }, '今日のラッキーメニュー'),
+      h('div', { style:{fontSize:12,color:'#AAA',marginTop:2} }, 'ボタンを押してメニューを決めよう！'),
     ),
 
-    // ── 提案ボタン ────────────────────────────────────────────────────────────
+    // ── ルーレット表示エリア ──────────────────────────────────────────────────
+    h('div', { style:{
+      background: rolling ? 'linear-gradient(135deg,#FF8050,#FF5E8A)' : recipe ? `linear-gradient(135deg,${colBase}CC,${colBase})` : '#F5F5F5',
+      borderRadius:24, padding:'28px 16px', textAlign:'center', marginBottom:14,
+      minHeight:110, display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+      transition:'background .3s',
+      boxShadow: rolling || recipe ? '0 6px 24px rgba(255,94,138,.25)' : 'none',
+    }},
+      rolling
+        ? h(Fragment, null,
+            h('div', { style:{fontSize:13,color:'rgba(255,255,255,.8)',fontWeight:700,marginBottom:8} }, '🎲 抽選中…'),
+            h('div', { style:{
+              fontSize:26,fontWeight:800,color:'#fff',
+              animation:'rouletteTick .1s ease',
+              letterSpacing:1,
+            }}, dispName),
+          )
+        : recipe
+          ? h(Fragment, null,
+              h('div', { style:{fontSize:12,color:'rgba(255,255,255,.85)',fontWeight:700,marginBottom:6} }, '🎉 今日のメニューは…'),
+              h('div', { style:{fontSize:28,fontWeight:800,color:'#fff',marginBottom:4} }, recipe.name),
+              h('div', { style:{
+                display:'inline-block',padding:'3px 12px',borderRadius:20,
+                background:'rgba(255,255,255,.25)',color:'#fff',fontSize:12,fontWeight:800,
+              }}, recipe.cat),
+            )
+          : h('div', { style:{color:'#CCC',fontSize:14,fontWeight:700} }, 'ボタンを押してスタート！'),
+    ),
+
+    // ── ボタン ───────────────────────────────────────────────────────────────
     h('button', {
       className: 'btn btn-grad',
-      style: { marginBottom:12, fontSize:16, boxShadow:'0 4px 18px rgba(255,94,138,.32)' },
+      style: { marginBottom:12, fontSize:16, boxShadow:'0 4px 18px rgba(255,94,138,.32)',
+        opacity: rolling ? 0.7 : 1 },
       onClick: pick,
-    }, recipe ? '🔀 別の献立を提案' : '✨ 献立を提案する'),
+      disabled: rolling,
+    }, rolling ? '🎲 抽選中…' : recipe ? '🔀 もう一度まわす' : '🎰 まわす！'),
 
     // ── レシピカード ──────────────────────────────────────────────────────────
-    recipe && h('div', { className:'card fi', style:{borderTop:`4px solid ${colBase}`} },
+    recipe && !rolling && h('div', { className:'card fi', style:{borderTop:`4px solid ${colBase}`} },
 
-      // タイトル行
-      h('div', { style:{display:'flex',alignItems:'center',gap:10,marginBottom:14} },
-        h('div', { style:{
-          padding:'4px 12px',borderRadius:20,fontSize:12,fontWeight:800,
-          background:colBase+'18',color:colBase,
-        }}, recipe.cat),
-        h('div', { style:{fontSize:20,fontWeight:800,flex:1} }, recipe.name),
-      ),
-
-      // 人数スライダー
+      // 人数
       h('div', { className:'card', style:{background:'#FAFAFA',padding:'12px 14px',marginBottom:12} },
-        h('div', { style:{display:'flex',alignItems:'center',gap:12,marginBottom:8} },
+        h('div', { style:{display:'flex',alignItems:'center',gap:12} },
           h('span', { style:{fontSize:13,fontWeight:800,color:'#888'} }, '👨‍👩‍👧‍👦 人数'),
           h('button', {
             onClick: () => setServings(s => Math.max(1,s-1)),
@@ -831,20 +830,18 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
             padding:'7px 0',borderBottom:'1px solid #F5F5F5',
           }},
             h('span', { style:{fontSize:14,fontWeight:600} }, name),
-            h('span', { style:{fontSize:13,color:'#FF5E8A',fontWeight:800} },
-              unit === '人分' ? servings+'人分'
-              : unit === '適量' ? '適量'
-              : fmtAmt(baseAmt, servings, baseServ) + ' ' + unit
+            h('span', { style:{fontSize:13,color:colBase,fontWeight:800} },
+              unit==='人分' ? servings+'人分' : unit==='適量' ? '適量'
+              : fmtAmt(baseAmt, servings, baseServ)+' '+unit
             ),
           )
         )
       ),
 
-      // レシピ手順（折りたたみ）
+      // 作り方
       h('button', {
-        className: 'btn btn-ghost',
-        style: {marginBottom:12, fontSize:13},
-        onClick: () => setShowSteps(p=>!p),
+        className:'btn btn-ghost', style:{marginBottom:12,fontSize:13},
+        onClick:()=>setShowSteps(p=>!p),
       }, showSteps ? '▲ 手順を隠す' : '▼ 作り方を見る'),
 
       showSteps && h('div', { className:'fi' },
@@ -852,7 +849,7 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
           h('div', { key:i, style:{display:'flex',gap:10,marginBottom:10,alignItems:'flex-start'} },
             h('div', { style:{
               width:24,height:24,borderRadius:12,flexShrink:0,
-              background:'linear-gradient(135deg,#FF8050,#FF5E8A)',
+              background:`linear-gradient(135deg,${colBase}AA,${colBase})`,
               color:'#fff',fontSize:12,fontWeight:800,
               display:'flex',alignItems:'center',justifyContent:'center',
             }}, i+1),
@@ -861,23 +858,16 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
         )
       ),
 
-      // 買い物メモ追加ボタン
+      // 買い物追加
       added
         ? h('div', { style:{
             padding:'12px',borderRadius:14,background:'#E8F5E9',
             color:'#2E7D32',fontWeight:800,fontSize:14,textAlign:'center',
           }}, '✅ 買い物メモに追加しました！')
         : h('button', {
-            className: 'btn btn-purple',
-            style: {boxShadow:'none'},
-            onClick: addToShop,
+            className:'btn btn-purple', style:{boxShadow:'none'},
+            onClick:addToShop,
           }, '🛒 材料を買い物メモに追加する'),
-    ),
-
-    // ── 空状態 ────────────────────────────────────────────────────────────────
-    !recipe && h('div', { className:'empty', style:{marginTop:16} },
-      h('span', { className:'empty-ico' }, '👆'),
-      'ボタンを押すと\nランダムで1品提案します',
     ),
   );
 }
@@ -948,19 +938,8 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
     // Add card
     h('div', { className:'card' },
       h('div', { style:{display:'flex',gap:8,marginBottom:10} },
-        h('div', { className:'mic-wrap', style:{flex:1,marginBottom:0} },
-          h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1,paddingRight:44}, placeholder:'商品を追加…', maxLength:LIM.text,
-            value:text, onChange:e=>setText(e.target.value), onKeyDown:e=>e.key==='Enter'&&add() }),
-          h('button', { className:'mic-btn'+(false?' listening':''), type:'button', title:'音声入力',
-            onClick:()=>{
-              const SR = window.SpeechRecognition??window.webkitSpeechRecognition;
-              if(!SR){alert('お使いのブラウザは音声入力に対応していません');return;}
-              const rec=new SR(); rec.lang='ja-JP'; rec.continuous=false; rec.interimResults=false;
-              rec.onresult=e=>{setText(t=>t+(t?'':'')+e.results[0][0].transcript);};
-              rec.start();
-            }
-          }, '🎤'),
-        ),
+        h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1}, placeholder:'商品を追加…', maxLength:LIM.text,
+          value:text, onChange:e=>setText(e.target.value), onKeyDown:e=>e.key==='Enter'&&add() }),
         h('button', { onClick:add, style:{padding:'0 18px',background:'#FF5E8A',color:'#fff',borderRadius:12,fontSize:24,fontWeight:900,boxShadow:'0 3px 12px rgba(255,94,138,.32)',flexShrink:0} }, '＋'),
       ),
       h('div', { style:{marginBottom:10} },
@@ -1204,7 +1183,7 @@ function CalTab({ events, setEvents, members }) {
     h('button',{className:'btn btn-purple',style:{marginBottom:12},onClick:()=>setShow(p=>!p)},show?'✕ 閉じる':'＋ 予定を追加する'),
     show&&h('div',{className:'card fi'},
       h('div',{className:'card-label'},'新しい予定'),
-      h(MicField,{value:form.title,onChange:v=>sf('title')(v),placeholder:'タイトル',maxLength:LIM.text}),
+      h('input',{className:'field',placeholder:'タイトル',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
       h('input',{className:'field',type:'date',value:form.date,onChange:e=>sf('date')(e.target.value)}),
       h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10}},
         h('button',{className:'toggle'+(form.allDay?' on':''),onClick:()=>setForm(p=>({...p,allDay:!p.allDay,time:''}))},form.allDay?'✓ 終日':'終日'),
@@ -1214,7 +1193,7 @@ function CalTab({ events, setEvents, members }) {
         h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'👤 誰の予定？'),
         h('div',{className:'chips'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},onClick:()=>sf('memberId')(m.id)},m.emoji+' '+m.name))),
       ),
-      h(MicField,{value:form.note,onChange:v=>sf('note')(v),placeholder:'メモ（任意）',maxLength:LIM.note}),
+      h('input',{className:'field',placeholder:'メモ（任意）',maxLength:LIM.note,value:form.note,onChange:e=>sf('note')(e.target.value)}),
       h('button',{className:'btn btn-grad',onClick:addEv},'追加する'),
     ),
     // 明日の予定
@@ -1245,7 +1224,7 @@ function EvRow({ ev, members, onDel, onEdit, compact }) {
   };
 
   if (editing) return h('div', { className:'ev-row', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
-    h(MicField,{value:f.title,onChange:v=>sf('title')(v),placeholder:'タイトル',maxLength:100}),
+    h('input',{className:'field',style:{margin:0},placeholder:'タイトル',maxLength:100,value:f.title,onChange:e=>sf('title')(e.target.value)}),
     h('input',{className:'field',style:{margin:0},type:'date',value:f.date,onChange:e=>sf('date')(e.target.value)}),
     h('div',{style:{display:'flex',alignItems:'center',gap:8}},
       h('button',{className:'toggle'+(f.allDay?' on':''),onClick:()=>setF(p=>({...p,allDay:!p.allDay,time:''}))},f.allDay?'✓ 終日':'終日'),
@@ -1260,7 +1239,7 @@ function EvRow({ ev, members, onDel, onEdit, compact }) {
           color:f.memberId===mm.id?mm.color:'#AAA',transition:'all .12s'}
       },mm.emoji+' '+mm.name))
     ),
-    h(MicField,{value:f.note,onChange:v=>sf('note')(v),placeholder:'メモ（任意）',maxLength:200}),
+    h('input',{className:'field',style:{margin:'4px 0 0'},placeholder:'メモ（任意）',maxLength:200,value:f.note,onChange:e=>sf('note')(e.target.value)}),
     h('div',{style:{display:'flex',gap:8,marginTop:4}},
       h('button',{onClick:save,style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13}},'✓ 保存'),
       h('button',{onClick:()=>setEditing(false),style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13}},'✕'),
@@ -1492,7 +1471,7 @@ function BudgetTab({ budget, setBudget, members }) {
         )
       ),
       // Title
-      h(MicField,{value:form.title,onChange:v=>sf('title')(v),placeholder:'内容（例：スーパー、電車代）',maxLength:LIM.text}),
+      h('input',{className:'field',placeholder:'内容（例：スーパー、電車代）',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
       // Amount — big tappable input
       h('div', { style:{position:'relative',marginBottom:10} },
         h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:18,fontWeight:800,color:'#CCC'} }, '¥'),
@@ -1657,7 +1636,7 @@ function BoardTab({ notes, setNotes, members }) {
         onClick:()=>setShowPost(p=>!p) }, showPost ? '✕ 閉じる' : '✏️ 投稿する'),
     ),
     showPost && h('div', { className:'board-post-card fi', style:{marginBottom:12} },
-      h(MicField,{value:text,onChange:v=>setText(v),placeholder:'家族へのメッセージを書いてください…',maxLength:200,multiline:true,style:{marginBottom:10}}),
+      h('textarea',{className:'field',style:{minHeight:90,resize:'none',marginBottom:10},placeholder:'家族へのメッセージを書いてください…',maxLength:200,value:text,onChange:e=>setText(e.target.value)}),
       h('div', { style:{marginBottom:10} },
         h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 投稿者'),
         h('div', { className:'chips' },
