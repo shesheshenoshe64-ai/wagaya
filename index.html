@@ -1338,7 +1338,9 @@ function BudgetTab({ budget, setBudget, members }) {
     setShow(false);
   };
 
-  const del = id => setBudget(p => p.filter(b => b.id !== id));
+  const del   = id => setBudget(p => p.filter(b => b.id !== id));
+  const editB = (id, changes) => setBudget(p => p.map(b => b.id===id ? {...b,...changes} : b));
+  const dupB  = b => setBudget(p => [...p, {...b, id:uid(), date:today()}]);
 
   // ── ローカル日付でYYYY-MM取得（タイムゾーンバグ修正）────────────────────────
   const localYM = (y, m) => `${y}-${String(m+1).padStart(2,'0')}`;
@@ -1453,6 +1455,71 @@ function BudgetTab({ budget, setBudget, members }) {
       ),
     ),
 
+    // ── 変動費トレンド ────────────────────────────────────────────────────────
+    h('div', { className:'card', style:{marginBottom:12} },
+      h('div', { className:'card-label' }, '📊 変動費の月次推移（直近6ヶ月）'),
+      h('div', { style:{fontSize:10,color:'#AAA',marginBottom:8} }, '電気・ガス・水道・食費'),
+      (() => {
+        // 直近6ヶ月のYM配列
+        const months = Array.from({length:6}, (_,i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - (5-i), 1);
+          return { ym: localYM(d.getFullYear(), d.getMonth()), label: (d.getMonth()+1)+'月' };
+        });
+        const TREND_CATS = ['食費','その他'];
+        // 食費・電気・ガス・水道を変動費として扱う（カテゴリ名で判定）
+        const VARIABLE = new Set(['食費','日用品','その他']);
+        // 月×カテゴリの合計
+        const catColors = { '食費':'#FF5E8A','日用品':'#4CAF50','その他':'#9B59B6' };
+        const variableCats = BCATS.filter(c => VARIABLE.has(c));
+        const maxVal = Math.max(1, ...months.flatMap(({ym}) =>
+          variableCats.map(cat =>
+            budget.filter(b=>b.type==='expense'&&b.category===cat&&b.date.startsWith(ym)).reduce((s,b)=>s+b.amount,0)
+          )
+        ));
+        const W = 320, H = 140, PAD = {t:10,r:16,b:28,l:52};
+        const gW = W-PAD.l-PAD.r, gH = H-PAD.t-PAD.b;
+        const xPos = i => PAD.l + i*(gW/(months.length-1));
+        const yPos = v => PAD.t + gH - (v/maxVal)*gH;
+        const fmtY = v => v>=10000 ? (v/10000).toFixed(0)+'万' : v>=1000 ? (v/1000).toFixed(0)+'千' : v;
+
+        return h('svg', { viewBox:`0 0 ${W} ${H}`, style:{width:'100%',overflow:'visible'} },
+          // Y軸目盛り
+          [0,0.5,1].map(r => {
+            const y = yPos(maxVal*r);
+            return h('g', {key:r},
+              h('line', {x1:PAD.l,y1:y,x2:W-PAD.r,y2:y,stroke:'#F0F0F0',strokeWidth:1}),
+              h('text', {x:PAD.l-4,y:y+4,textAnchor:'end',style:{fontSize:9,fill:'#CCC'}}, fmtY(Math.round(maxVal*r))),
+            );
+          }),
+          // X軸ラベル
+          months.map(({label},i) =>
+            h('text', {key:i, x:xPos(i), y:H-4, textAnchor:'middle', style:{fontSize:9,fill:'#AAA'}}, label)
+          ),
+          // 各カテゴリの折れ線
+          variableCats.map(cat => {
+            const col = BCLR[cat] ?? '#AAA';
+            const vals = months.map(({ym}) =>
+              budget.filter(b=>b.type==='expense'&&b.category===cat&&b.date.startsWith(ym)).reduce((s,b)=>s+b.amount,0)
+            );
+            const pts = vals.map((v,i) => `${xPos(i)},${yPos(v)}`).join(' ');
+            return h('g', {key:cat},
+              h('polyline', {points:pts, fill:'none', stroke:col, strokeWidth:2.5, strokeLinejoin:'round', strokeLinecap:'round'}),
+              vals.map((v,i) => v>0 && h('circle', {key:i, cx:xPos(i), cy:yPos(v), r:4, fill:col, stroke:'#fff', strokeWidth:1.5})),
+            );
+          }),
+        );
+      })(),
+      // 凡例
+      h('div', { style:{display:'flex',gap:12,marginTop:8,flexWrap:'wrap'} },
+        BCATS.filter(c=>['食費','日用品','その他'].includes(c)).map(cat =>
+          h('div', {key:cat, style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#666'}},
+            h('div', {style:{width:16,height:3,borderRadius:2,background:BCLR[cat]}}),
+            cat,
+          )
+        )
+      ),
+    ),
+
     // ── Add button ───────────────────────────────────────────────────────────
     h('button', {
       className:'btn btn-purple', style:{marginBottom:12},
@@ -1461,55 +1528,36 @@ function BudgetTab({ budget, setBudget, members }) {
 
     // ── Add form ─────────────────────────────────────────────────────────────
     show && h('div', { className:'card fi' },
-      // Type toggle
       h('div', { className:'type-row' },
         [{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t =>
-          h('button', { key:t.k,
-            className:'type-btn'+(form.type===t.k?' on':''),
-            onClick:()=>sf('type')(t.k),
-          }, t.label)
+          h('button', { key:t.k, className:'type-btn'+(form.type===t.k?' on':''), onClick:()=>sf('type')(t.k) }, t.label)
         )
       ),
-      // Title
       h('input',{className:'field',placeholder:'内容（例：スーパー、電車代）',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
-      // Amount — big tappable input
       h('div', { style:{position:'relative',marginBottom:10} },
         h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:18,fontWeight:800,color:'#CCC'} }, '¥'),
-        h('input', {
-          className:'field',
-          style:{paddingLeft:30,marginBottom:0,fontSize:20,fontWeight:800,letterSpacing:1},
-          type:'number', inputMode:'numeric', placeholder:'0',
-          min:0, max:LIM.amount, value:form.amount,
-          onChange:e=>sf('amount')(e.target.value),
-        }),
+        h('input', { className:'field', style:{paddingLeft:30,marginBottom:0,fontSize:20,fontWeight:800,letterSpacing:1},
+          type:'number', inputMode:'numeric', placeholder:'0', min:0, max:LIM.amount, value:form.amount, onChange:e=>sf('amount')(e.target.value) }),
       ),
-      // Category — icon buttons
       h('div', { style:{marginBottom:10} },
         h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:8} }, 'カテゴリ'),
         h('div', { style:{display:'flex',flexWrap:'wrap',gap:8} },
-          BCATS.map(c => h('button', { key:c,
-            onClick:()=>sf('category')(c),
-            style:{
-              padding:'8px 12px',borderRadius:14,border:'2px solid',fontSize:13,fontWeight:700,
+          BCATS.map(c => h('button', { key:c, onClick:()=>sf('category')(c),
+            style:{ padding:'8px 12px',borderRadius:14,border:'2px solid',fontSize:13,fontWeight:700,
               display:'flex',alignItems:'center',gap:5,
-              borderColor: form.category===c ? BCLR[c] : '#E5E5E5',
-              background:  form.category===c ? BCLR[c]+'22' : '#fff',
-              color:       form.category===c ? BCLR[c] : '#888',
-              transition:'all .15s',
-            }
+              borderColor:form.category===c?BCLR[c]:'#E5E5E5',
+              background:form.category===c?BCLR[c]+'22':'#fff',
+              color:form.category===c?BCLR[c]:'#888', transition:'all .15s' }
           }, BCAT_ICONS[c]+' '+c))
         ),
       ),
-      // Date
       h('input', { className:'field', type:'date', value:form.date, onChange:e=>sf('date')(e.target.value) }),
-      // Member
       h('div', { style:{marginBottom:10} },
         h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 誰が？'),
         h('div', { className:'chips' },
           members.map(m => h('button', { key:m.id, className:'m-chip',
             style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},
-            onClick:()=>sf('memberId')(m.id),
-          }, m.emoji+' '+m.name))
+            onClick:()=>sf('memberId')(m.id) }, m.emoji+' '+m.name))
         ),
       ),
       h('button', { className:'btn btn-grad', onClick:add }, '追加する'),
@@ -1520,8 +1568,7 @@ function BudgetTab({ budget, setBudget, members }) {
       [{k:'all',l:'すべて'},{k:'expense',l:'💸 支出'},{k:'income',l:'💰 収入'}].map(f =>
         h('button', { key:f.k, className:'chip'+(filter===f.k?' on':''),
           style:{color:filter===f.k?'#333':'#888',borderColor:filter===f.k?'#333':'#E5E5E5',background:filter===f.k?'#EEE':'#fff'},
-          onClick:()=>setFilter(f.k),
-        }, f.l)
+          onClick:()=>setFilter(f.k) }, f.l)
       )
     ),
 
@@ -1530,25 +1577,76 @@ function BudgetTab({ budget, setBudget, members }) {
       listItems.length === 0
         ? h('div', { className:'empty', style:{padding:'16px 0'} },
             h('span', { className:'empty-ico' }, '💳'), 'この月の記録はありません')
-        : listItems.map(b => {
-            const m = members.find(x => x.id===b.memberId) ?? members[0];
-            return h('div', { key:b.id, className:'b-row' },
-              h('div', { className:'b-icon', style:{background:BCLR[b.category]+'28',fontSize:20} },
-                BCAT_ICONS[b.category]),
-              h('div', { style:{flex:1,minWidth:0} },
-                h('div', { style:{fontSize:14,fontWeight:700} }, b.title),
-                h('div', { style:{fontSize:11,color:'#AAA',marginTop:1,display:'flex',gap:6,alignItems:'center'} },
-                  h('span', null, b.date),
-                  h('span', { style:{color:BCLR[b.category],fontWeight:700} }, BCAT_ICONS[b.category]+b.category),
-                  h('span', { style:{color:m?.color,fontWeight:700} }, m?.emoji+m?.name),
-                ),
-              ),
-              h('div', { style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0,marginRight:4} },
-                (b.type==='income' ? '+' : '-') + fmt(b.amount)),
-              h('button', { className:'del', onClick:()=>del(b.id) }, '✕'),
-            );
-          })
+        : listItems.map(b => h(BudgetRow, { key:b.id, b, members, onEdit:editB, onDel:del, onDup:dupB }))
     ),
+  );
+}
+
+function BudgetRow({ b, members, onEdit, onDel, onDup }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ title:b.title, amount:String(b.amount), category:b.category, memberId:b.memberId, date:b.date, type:b.type });
+  const sf = k => v => setF(p => ({...p,[k]:v}));
+  const m = members.find(x => x.id===b.memberId) ?? members[0];
+  const fmt = v => '¥'+v.toLocaleString();
+
+  const save = () => {
+    const title = (f.title||'').trim();
+    const amount = parseInt(String(f.amount).replace(/[^0-9]/g,''),10);
+    if (!title || !amount) return;
+    onEdit(b.id, { title, amount, category:f.category, memberId:f.memberId, date:f.date, type:f.type });
+    setEditing(false);
+  };
+
+  if (editing) return h('div', { className:'b-row', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    // type toggle
+    h('div', { className:'type-row' },
+      [{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t =>
+        h('button', { key:t.k, className:'type-btn'+(f.type===t.k?' on':''), onClick:()=>sf('type')(t.k) }, t.label)
+      )
+    ),
+    h('input', { className:'field', style:{margin:0}, placeholder:'内容', maxLength:100, value:f.title, onChange:e=>sf('title')(e.target.value) }),
+    h('div', { style:{position:'relative'} },
+      h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:16,fontWeight:800,color:'#CCC'} }, '¥'),
+      h('input', { className:'field', style:{paddingLeft:28,margin:0,fontSize:18,fontWeight:800},
+        type:'number', inputMode:'numeric', value:f.amount, onChange:e=>sf('amount')(e.target.value) }),
+    ),
+    h('div', { style:{display:'flex',flexWrap:'wrap',gap:6,margin:'4px 0'} },
+      BCATS.map(c => h('button', { key:c, onClick:()=>sf('category')(c),
+        style:{ padding:'6px 10px',borderRadius:12,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.category===c?BCLR[c]:'#E5E5E5',
+          background:f.category===c?BCLR[c]+'22':'#fff',
+          color:f.category===c?BCLR[c]:'#AAA' }
+      }, BCAT_ICONS[c]+' '+c))
+    ),
+    h('input', { className:'field', style:{margin:0}, type:'date', value:f.date, onChange:e=>sf('date')(e.target.value) }),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap'} },
+      members.map(mm => h('button', { key:mm.id, onClick:()=>sf('memberId')(mm.id),
+        style:{ padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.memberId===mm.id?mm.color:'#E5E5E5',
+          background:f.memberId===mm.id?mm.color+'22':'#fff',
+          color:f.memberId===mm.id?mm.color:'#AAA' }
+      }, mm.emoji+' '+mm.name))
+    ),
+    h('div', { style:{display:'flex',gap:8} },
+      h('button', { onClick:save, style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13} }, '✓ 保存'),
+      h('button', { onClick:()=>setEditing(false), style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13} }, '✕'),
+    ),
+  );
+
+  return h('div', { className:'b-row' },
+    h('div', { className:'b-icon', style:{background:BCLR[b.category]+'28',fontSize:20} }, BCAT_ICONS[b.category]),
+    h('div', { style:{flex:1,minWidth:0}, onClick:()=>setEditing(true), cursor:'pointer' },
+      h('div', { style:{fontSize:14,fontWeight:700,cursor:'pointer'} }, b.title),
+      h('div', { style:{fontSize:11,color:'#AAA',marginTop:1,display:'flex',gap:6,alignItems:'center'} },
+        h('span', null, b.date),
+        h('span', { style:{color:BCLR[b.category],fontWeight:700} }, BCAT_ICONS[b.category]+b.category),
+        h('span', { style:{color:m?.color,fontWeight:700} }, m?.emoji+m?.name),
+      ),
+    ),
+    h('div', { style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0,marginRight:4} },
+      (b.type==='income'?'+':'-')+fmt(b.amount)),
+    h('button', { onClick:()=>onDup(b), style:{fontSize:13,padding:'3px 7px',borderRadius:8,background:'#F0F0F0',color:'#888',marginRight:4}, title:'複製' }, '📋'),
+    h('button', { className:'del', onClick:()=>onDel(b.id) }, '✕'),
   );
 }
 
