@@ -239,8 +239,8 @@ const DEF_CATS = [
   {id:'sc6',name:'コンビニ',color:'#9C27B0'},
   {id:'sc7',name:'その他',color:'#78909C'},
 ];
-const BCATS = ['食費','日用品','交通費','娯楽','医療','教育','その他'];
-const BCLR = {食費:'#FF6B6B',日用品:'#4ECDC4',交通費:'#45B7D1',娯楽:'#7BC67E',医療:'#F0A500',教育:'#CE93D8',その他:'#B0BEC5'};
+const BCATS = ['食費','電気代','ガス代','水道代','日用品','交通費','娯楽','医療','教育','その他'];
+const BCLR = {食費:'#FF6B6B',電気代:'#F5A623',ガス代:'#4ECDC4',水道代:'#45B7D1',日用品:'#7BC67E',交通費:'#5C6BC0',娯楽:'#CE93D8',医療:'#F0A500',教育:'#AB47BC',その他:'#B0BEC5'};
 const PAL = ['#4CAF50','#2196F3','#FF9800','#E91E8C','#F44336','#795548','#9C27B0','#78909C','#009688','#FF5722','#3F51B5','#00BCD4','#8BC34A','#FFC107','#673AB7','#E91E63','#4A90D9','#F5A623','#5DAE5F','#FF7043'];
 const EMOJIS = ['👨','👩','🧒','👦','👧','🧑','👴','👵','👶','🐣'];
 
@@ -1264,7 +1264,7 @@ function EvRow({ ev, members, onDel, onEdit, compact }) {
 
 
 // ═══════════════════════ BUDGET ══════════════════════════════════════════════
-const BCAT_ICONS = {食費:'🍽',日用品:'🧴',交通費:'🚃',娯楽:'🎮',医療:'💊',教育:'📚',その他:'📦'};
+const BCAT_ICONS = {食費:'🍽',電気代:'⚡',ガス代:'🔥',水道代:'💧',日用品:'🧴',交通費:'🚃',娯楽:'🎮',医療:'💊',教育:'📚',その他:'📦'};
 
 function DonutChart({ data, total, selected, onSelect }) {
   // data: [{cat, val, color}]
@@ -1467,7 +1467,7 @@ function BudgetTab({ budget, setBudget, members }) {
         });
         const TREND_CATS = ['食費','その他'];
         // 食費・電気・ガス・水道を変動費として扱う（カテゴリ名で判定）
-        const VARIABLE = new Set(['食費','日用品','その他']);
+        const VARIABLE = new Set(['食費','電気代','ガス代','水道代']);
         // 月×カテゴリの合計
         const catColors = { '食費':'#FF5E8A','日用品':'#4CAF50','その他':'#9B59B6' };
         const variableCats = BCATS.filter(c => VARIABLE.has(c));
@@ -1511,7 +1511,7 @@ function BudgetTab({ budget, setBudget, members }) {
       })(),
       // 凡例
       h('div', { style:{display:'flex',gap:12,marginTop:8,flexWrap:'wrap'} },
-        BCATS.filter(c=>['食費','日用品','その他'].includes(c)).map(cat =>
+        BCATS.filter(c=>['食費','電気代','ガス代','水道代'].includes(c)).map(cat =>
           h('div', {key:cat, style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#666'}},
             h('div', {style:{width:16,height:3,borderRadius:2,background:BCLR[cat]}}),
             cat,
