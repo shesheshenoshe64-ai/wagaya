@@ -72,7 +72,7 @@ a{color:inherit}
 .content::-webkit-scrollbar-thumb{background:rgba(109,40,217,.3);border-radius:2px}
 
 /* Cards */
-.card{animation:cardIn .38s cubic-bezier(.25,1,.5,1) both;background:rgba(255,255,255,.055);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-radius:22px;padding:17px;margin-bottom:12px;border:1px solid rgba(255,255,255,.09);box-shadow:0 8px 40px rgba(0,0,0,.35),0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .2s cubic-bezier(.25,1,.5,1),box-shadow .2s;position:relative;overflow:hidden}
+.card{background:rgba(255,255,255,.055);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-radius:22px;padding:17px;margin-bottom:12px;border:1px solid rgba(255,255,255,.09);box-shadow:0 8px 40px rgba(0,0,0,.35),0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .2s cubic-bezier(.25,1,.5,1),box-shadow .2s;position:relative;overflow:hidden}
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
 .card:active{transform:scale(.99)}
 .card-label{font-size:10px;font-weight:800;color:rgba(255,255,255,.27);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:10px}
@@ -717,7 +717,7 @@ function MainApp({ db, onReset }) {
     ),
     // Content — with 3D perspective slide on tab change
     h('div', { className:'content', key:tab,
-      style:{animation:'slideUp .32s cubic-bezier(.25,1.4,.5,1) both'}
+      style:{animation:'slideUp .32s cubic-bezier(.25,1.4,.5,1) both, cardIn .35s cubic-bezier(.25,1,.5,1) both'}
     },
       tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
       tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
@@ -824,10 +824,10 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
       rolling
         ? h(Fragment, null,
             h('div', { style:{fontSize:13,color:'rgba(255,255,255,.8)',fontWeight:700,marginBottom:8} }, '🎲 抽選中…'),
-            h('div', { style:{
+            h('div', { key:dispName, style:{
               fontSize:26,fontWeight:800,color:'#fff',
-              animation:'rouletteTick .1s ease',
-              letterSpacing:1,
+              animation:'rouletteTick .15s cubic-bezier(.25,1.4,.5,1)',
+              letterSpacing:1,display:'inline-block',
             }}, dispName),
           )
         : recipe
