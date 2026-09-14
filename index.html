@@ -41,6 +41,81 @@ a{color:inherit}
 .spinner{width:20px;height:20px;border:2.5px solid rgba(139,92,246,.2);border-top-color:#A855F7;border-radius:50%;animation:spin .75s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
 
 /* Ambient Orbs */
+
+
+
+
+/* ── Hologram & Parallax ────────────────────────────────────────────────── */
+@keyframes holoSpin{
+  0%  {transform:rotateY(0deg)   rotateX(8deg)  scale(1)}
+  25% {transform:rotateY(15deg)  rotateX(4deg)  scale(1.06)}
+  50% {transform:rotateY(0deg)   rotateX(-5deg) scale(1)}
+  75% {transform:rotateY(-15deg) rotateX(4deg)  scale(1.04)}
+  100%{transform:rotateY(0deg)   rotateX(8deg)  scale(1)}
+}
+@keyframes holoPulse{
+  0%,100%{filter:drop-shadow(0 0 8px rgba(168,85,247,.6)) drop-shadow(0 0 2px rgba(255,255,255,.3))}
+  50%    {filter:drop-shadow(0 0 18px rgba(168,85,247,.9)) drop-shadow(0 0 6px rgba(236,72,153,.5))}
+}
+@keyframes scanLine{
+  0%  {transform:translateY(-100%)}
+  100%{transform:translateY(400%)}
+}
+.hdr-logo-3d{
+  display:inline-block;
+  transform-style:preserve-3d;
+  animation:holoSpin 6s ease-in-out infinite, holoPulse 2.5s ease-in-out infinite;
+  cursor:default;
+}
+.scan-overlay{
+  position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit;
+}
+.scan-overlay::after{
+  content:'';position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.6),rgba(236,72,153,.4),transparent);
+  animation:scanLine 3s linear infinite;
+  box-shadow:0 0 8px rgba(168,85,247,.6);
+}
+@keyframes borderRotate{
+  0%  {background-position:0% 50%}
+  100%{background-position:200% 50%}
+}
+.card::after{
+  content:'';position:absolute;inset:-1px;border-radius:23px;
+  background:linear-gradient(135deg,rgba(109,40,217,.0),rgba(236,72,153,.0),rgba(59,130,246,.0));
+  z-index:-1;transition:opacity .3s;pointer-events:none;
+}
+.card:hover::after{
+  background:linear-gradient(135deg,rgba(109,40,217,.4),rgba(236,72,153,.3),rgba(59,130,246,.2));
+  animation:borderRotate 2s linear infinite;background-size:200%;
+}
+/* Scrolling parallax layers */
+.parallax-slow{transform:translateZ(0);will-change:transform}
+.parallax-mid {transform:translateZ(0);will-change:transform}
+/* ── 3D Page Flip Transition ────────────────────────────────────────────── */
+@keyframes pageFlipIn{
+  0%  {opacity:0;transform:perspective(1200px) rotateY(-25deg) translateX(-30px) scale(.94)}
+  60% {opacity:1;transform:perspective(1200px) rotateY(4deg)  translateX(3px)   scale(1.01)}
+  100%{opacity:1;transform:perspective(1200px) rotateY(0deg)  translateX(0)     scale(1)}
+}
+@keyframes pageFlipOut{
+  0%  {opacity:1;transform:perspective(1200px) rotateY(0deg)  scale(1)}
+  100%{opacity:0;transform:perspective(1200px) rotateY(25deg) translateX(30px) scale(.94)}
+}
+@keyframes floatIn{
+  0%  {opacity:0;transform:perspective(800px) rotateX(-18deg) translateY(28px) scale(.95)}
+  65% {opacity:1;transform:perspective(800px) rotateX(3deg)   translateY(-3px)  scale(1.01)}
+  100%{opacity:1;transform:perspective(800px) rotateX(0deg)   translateY(0)     scale(1)}
+}
+.tab-content-enter{animation:pageFlipIn .38s cubic-bezier(.25,1,.5,1) both}
+.tab-content-enter-alt{animation:floatIn .38s cubic-bezier(.25,1,.5,1) both}
+/* ── 3D Tilt Cards ──────────────────────────────────────────────────────── */
+.card-tilt{transform-style:preserve-3d;transition:transform .15s ease,box-shadow .15s ease;will-change:transform}
+.card-tilt:active{transform:perspective(800px) scale3d(.97,.97,1) !important;box-shadow:0 4px 16px rgba(0,0,0,.4) !important}
+.card-tilt-inner{transform:translateZ(8px);pointer-events:none;position:absolute;inset:0;border-radius:22px;background:linear-gradient(135deg,rgba(255,255,255,.06) 0%,transparent 60%);transition:opacity .2s}
+.card-shine{position:absolute;inset:0;border-radius:22px;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.12),transparent 65%);opacity:0;transition:opacity .2s}
+/* ── WebGL 3D Background ─────────────────────────────────────────────────── */
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.85}
 .orb{position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;will-change:transform}
 .orb-1{width:340px;height:340px;background:radial-gradient(circle,rgba(109,40,217,.38),transparent 70%);top:-100px;left:-100px;animation:orb1 13s ease-in-out infinite}
 .orb-2{width:280px;height:280px;background:radial-gradient(circle,rgba(190,18,60,.28),transparent 70%);bottom:-80px;right:-80px;animation:orb2 16s ease-in-out infinite}
@@ -244,9 +319,283 @@ input[type=date],input[type=time]{color-scheme:dark}
 .instruction-text b{color:#F9A8D4}
 .link-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 15px;background:linear-gradient(135deg,#6D28D9,#EC4899);color:#fff;border-radius:11px;font-size:13px;font-weight:700;text-decoration:none;margin-top:4px;box-shadow:0 4px 14px rgba(109,40,217,.33)}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+<canvas id="bg-canvas"></canvas>
 <div id="root"></div>
+
+
+<script>
+// ── Three.js WebGL 3D Background ─────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas || !window.THREE) return;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.z = 6;
+
+  // ── Materials ──────────────────────────────────────────────────────────────
+  const matCrystal = new THREE.MeshPhongMaterial({
+    color: 0x7C3AED,
+    emissive: 0x3B0764,
+    specular: 0xC4B5FD,
+    shininess: 120,
+    transparent: true,
+    opacity: 0.65,
+    wireframe: false,
+  });
+  const matCrystal2 = new THREE.MeshPhongMaterial({
+    color: 0xEC4899,
+    emissive: 0x831843,
+    specular: 0xFCE7F3,
+    shininess: 100,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const matWire = new THREE.MeshBasicMaterial({
+    color: 0xA855F7,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.18,
+  });
+  const matWire2 = new THREE.MeshBasicMaterial({
+    color: 0xEC4899,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.12,
+  });
+
+  // ── Geometries ─────────────────────────────────────────────────────────────
+  const objects = [];
+
+  // Large central octahedron
+  const geo1 = new THREE.OctahedronGeometry(1.1, 0);
+  const mesh1 = new THREE.Mesh(geo1, matCrystal);
+  mesh1.position.set(-2.2, 1.2, -1.5);
+  scene.add(mesh1);
+  const wire1 = new THREE.Mesh(geo1, matWire);
+  mesh1.add(wire1);
+  objects.push({ mesh: mesh1, rx: 0.004, ry: 0.007, rz: 0.002, floatAmp: 0.18, floatSpeed: 0.8, phase: 0 });
+
+  // Icosahedron
+  const geo2 = new THREE.IcosahedronGeometry(0.75, 0);
+  const mesh2 = new THREE.Mesh(geo2, matCrystal2);
+  mesh2.position.set(2.4, -0.8, -1.0);
+  scene.add(mesh2);
+  const wire2 = new THREE.Mesh(geo2, matWire2);
+  mesh2.add(wire2);
+  objects.push({ mesh: mesh2, rx: 0.006, ry: -0.005, rz: 0.003, floatAmp: 0.22, floatSpeed: 1.1, phase: 1.2 });
+
+  // Tetrahedron
+  const geo3 = new THREE.TetrahedronGeometry(0.55, 0);
+  const mat3 = new THREE.MeshPhongMaterial({ color: 0x3B82F6, emissive: 0x1E3A8A, specular: 0xBFDBFE, shininess: 90, transparent: true, opacity: 0.5 });
+  const mesh3 = new THREE.Mesh(geo3, mat3);
+  mesh3.position.set(0.5, 2.2, -2.0);
+  scene.add(mesh3);
+  objects.push({ mesh: mesh3, rx: -0.008, ry: 0.006, rz: 0.004, floatAmp: 0.15, floatSpeed: 0.7, phase: 2.4 });
+
+  // Small octahedron cluster
+  [[-1.2, -2.0, -0.8], [1.8, 1.8, -2.5], [-2.8, -0.5, -2.0]].forEach(([x,y,z], i) => {
+    const g = new THREE.OctahedronGeometry(0.3 + i * 0.1, 0);
+    const m = new THREE.MeshPhongMaterial({
+      color: i % 2 === 0 ? 0x8B5CF6 : 0xF472B6,
+      transparent: true, opacity: 0.4 + i * 0.1,
+      emissive: i % 2 === 0 ? 0x4C1D95 : 0x831843,
+    });
+    const sm = new THREE.Mesh(g, m);
+    sm.position.set(x, y, z);
+    scene.add(sm);
+    objects.push({ mesh: sm, rx: 0.01 * (i+1), ry: -0.008 * (i+1), rz: 0.005, floatAmp: 0.12, floatSpeed: 1.3 + i*0.2, phase: i * 1.8 });
+  });
+
+  // Torus (ring)
+  const geo4 = new THREE.TorusGeometry(0.5, 0.12, 8, 24);
+  const mat4 = new THREE.MeshPhongMaterial({ color: 0xC084FC, emissive: 0x6B21A8, transparent: true, opacity: 0.45, shininess: 80 });
+  const mesh4 = new THREE.Mesh(geo4, mat4);
+  mesh4.position.set(2.8, 0.5, -1.2);
+  scene.add(mesh4);
+  objects.push({ mesh: mesh4, rx: 0.012, ry: 0.008, rz: -0.005, floatAmp: 0.2, floatSpeed: 0.9, phase: 0.6 });
+
+  // ── Lights ─────────────────────────────────────────────────────────────────
+  const ambientLight = new THREE.AmbientLight(0x1a0533, 0.8);
+  scene.add(ambientLight);
+
+  const pointLight1 = new THREE.PointLight(0x7C3AED, 2.5, 12);
+  pointLight1.position.set(-3, 3, 2);
+  scene.add(pointLight1);
+
+  const pointLight2 = new THREE.PointLight(0xEC4899, 2.0, 10);
+  pointLight2.position.set(3, -2, 1);
+  scene.add(pointLight2);
+
+  const pointLight3 = new THREE.PointLight(0x3B82F6, 1.5, 8);
+  pointLight3.position.set(0, -3, 3);
+  scene.add(pointLight3);
+
+  // ── Particle field ─────────────────────────────────────────────────────────
+  const particleGeo = new THREE.BufferGeometry();
+  const particleCount = 180;
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3]     = (Math.random() - 0.5) * 14;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 14;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 8 - 2;
+  }
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({ color: 0xA855F7, size: 0.035, transparent: true, opacity: 0.55 });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+
+  // ── Gyro / mouse tilt ─────────────────────────────────────────────────────
+  let tiltX = 0, tiltY = 0;
+  window.addEventListener('deviceorientation', e => {
+    tiltX = (e.gamma || 0) / 30;  // -1 to 1
+    tiltY = (e.beta  || 0) / 30;
+  });
+  window.addEventListener('mousemove', e => {
+    tiltX = (e.clientX / window.innerWidth  - 0.5) * 0.6;
+    tiltY = (e.clientY / window.innerHeight - 0.5) * 0.4;
+  });
+
+  // ── Resize ────────────────────────────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ── Animation loop ────────────────────────────────────────────────────────
+  let t = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    t += 0.016;
+
+    objects.forEach(obj => {
+      obj.mesh.rotation.x += obj.rx;
+      obj.mesh.rotation.y += obj.ry;
+      obj.mesh.rotation.z += obj.rz;
+      // Floating motion
+      const base = obj.mesh.position.y;
+      obj.mesh.position.y += Math.sin(t * obj.floatSpeed + obj.phase) * obj.floatAmp * 0.016;
+    });
+
+    // Particle slow rotation
+    particles.rotation.y += 0.0008;
+    particles.rotation.x += 0.0003;
+
+    // Camera subtle drift from gyro/mouse
+    camera.position.x += (tiltX * 0.4 - camera.position.x) * 0.04;
+    camera.position.y += (-tiltY * 0.3 - camera.position.y) * 0.04;
+    camera.lookAt(scene.position);
+
+    // Light pulsing
+    pointLight1.intensity = 2.5 + Math.sin(t * 1.2) * 0.6;
+    pointLight2.intensity = 2.0 + Math.sin(t * 0.8 + 1.5) * 0.5;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+
+
+// ── 3D Card Tilt ──────────────────────────────────────────────────────────────
+(function() {
+  let gyroX = 0, gyroY = 0;
+  const hasSensor = typeof DeviceOrientationEvent !== 'undefined';
+
+  window.addEventListener('deviceorientation', e => {
+    gyroX = Math.max(-15, Math.min(15, e.gamma || 0));
+    gyroY = Math.max(-10, Math.min(10, (e.beta || 0) - 30));
+    applyGyroTilt();
+  });
+
+  function applyGyroTilt() {
+    document.querySelectorAll('.card').forEach(card => {
+      card.style.transform =
+        `perspective(900px) rotateX(${-gyroY * 0.4}deg) rotateY(${gyroX * 0.5}deg)`;
+    });
+  }
+
+  // Mouse tilt for non-mobile
+  document.addEventListener('mousemove', e => {
+    if (hasSensor) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const rx = ((e.clientY - cy) / cy) * -6;
+    const ry = ((e.clientX - cx) / cx) *  8;
+    document.querySelectorAll('.card').forEach(card => {
+      const rect = card.getBoundingClientRect();
+      const cardCX = rect.left + rect.width / 2;
+      const cardCY = rect.top  + rect.height / 2;
+      const dx = (e.clientX - cardCX) / (rect.width  * 0.5);
+      const dy = (e.clientY - cardCY) / (rect.height * 0.5);
+      card.style.transform =
+        `perspective(900px) rotateX(${-dy * 5}deg) rotateY(${dx * 7}deg) scale3d(1.01,1.01,1.01)`;
+      // Shine effect
+      const shine = card.querySelector('.card-shine');
+      if (shine) {
+        shine.style.opacity = '1';
+        shine.style.background =
+          `radial-gradient(circle at ${(dx+1)*50}% ${(dy+1)*50}%,rgba(255,255,255,.14),transparent 65%)`;
+      }
+    });
+  });
+
+  document.addEventListener('mouseleave', () => {
+    document.querySelectorAll('.card').forEach(card => {
+      card.style.transform = '';
+      const shine = card.querySelector('.card-shine');
+      if (shine) shine.style.opacity = '0';
+    });
+  });
+})();
+
+
+// ── Parallax Scroll & Enhanced Gyro ──────────────────────────────────────────
+(function() {
+  const content = document.querySelector ? null : null;
+
+  // Smooth scroll parallax on content
+  document.addEventListener('scroll', () => {}, { passive: true });
+
+  // Scroll parallax for content items
+  function initParallax() {
+    const el = document.querySelector('.content');
+    if (!el) return;
+    el.addEventListener('scroll', () => {
+      const scrollY = el.scrollTop;
+      const orbs = document.querySelectorAll('.orb');
+      orbs.forEach((orb, i) => {
+        const factor = (i + 1) * 0.08;
+        orb.style.transform += ` translateY(${scrollY * factor}px)`;
+      });
+    }, { passive: true });
+  }
+  // Init after React renders
+  setTimeout(initParallax, 1000);
+
+  // Request gyro permission on iOS 13+
+  window.__requestGyro = function() {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(state => { if (state === 'granted') console.log('Gyro granted'); })
+        .catch(console.error);
+    }
+  };
+  // Auto-request on first tap
+  document.addEventListener('touchstart', function handler() {
+    window.__requestGyro && window.__requestGyro();
+    document.removeEventListener('touchstart', handler);
+  }, { once: true });
+})();
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -693,7 +1042,7 @@ function MainApp({ db, onReset }) {
     // Header
     h('div', { className:'hdr' },
       h('div', { className:'hdr-top' },
-        h('span', { style:{fontSize:26,filter:'drop-shadow(0 0 8px rgba(168,85,247,.6))'} }, '🏠'),
+        h('span', { className:'hdr-logo-3d', style:{fontSize:26,display:'inline-block'} }, '🏠'),
         h('div', { className:'hdr-title' }, 'わが家の手帳'),
         h('div', { className:'sync-pill' },
           h('div', { className:'sync-dot', style:{background: synced ? '#4ADE80' : '#FB923C', boxShadow: synced ? '0 0 6px #4ADE80' : '0 0 6px #FB923C'} }),
@@ -717,7 +1066,7 @@ function MainApp({ db, onReset }) {
     ),
     // Content — with 3D perspective slide on tab change
     h('div', { className:'content', key:tab,
-      style:{animation:'slideUp .32s cubic-bezier(.25,1.4,.5,1) both, cardIn .35s cubic-bezier(.25,1,.5,1) both'}
+      style:{animation:'pageFlipIn .38s cubic-bezier(.25,1,.5,1) both',transformOrigin:'left center'}
     },
       tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
       tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
