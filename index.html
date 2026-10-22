@@ -215,6 +215,18 @@ a{color:inherit}
 .instruction-text{font-size:13px;line-height:1.7;color:#333;flex:1}
 .instruction-text b{color:#FF5E8A}
 .link-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-top:4px}
+
+.tk-chips{position:absolute;top:0;left:0;right:0;height:52px;display:flex;gap:6px;align-items:center;padding:0 10px;overflow-x:auto;background:#F4F1EE;z-index:3;scrollbar-width:none}
+.tk-chips::-webkit-scrollbar{display:none}
+.tk-chips .chip{flex:none;padding:8px 14px;font-size:13px}
+.tk-fab{position:absolute;right:14px;bottom:max(16px,env(safe-area-inset-bottom));z-index:3;height:52px;padding:0 22px;border-radius:26px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;font-size:16px;font-weight:800;box-shadow:0 6px 18px rgba(255,94,138,.4)}
+.tk-empty{position:absolute;inset:52px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.9;color:#B5ADA2;font-size:14px;font-weight:700;pointer-events:none;white-space:pre-line;z-index:2}
+.tk-back{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease}
+.tk-sheet{background:#fff;width:100%;max-width:430px;border-radius:24px 24px 0 0;padding:18px 16px max(16px,env(safe-area-inset-bottom));animation:slideUp .25s ease;max-height:90dvh;overflow-y:auto}
+.tk-lb{font-size:10px;font-weight:800;color:#AAA;letter-spacing:.8px;margin:12px 0 6px}
+.tk-row{display:flex;gap:6px;flex-wrap:wrap}
+.tk-act{display:flex;gap:8px;margin-top:16px}
+.tk-del{flex:1;padding:13px;border-radius:14px;border:2px solid #FFB3C6;color:#FF5E8A;font-weight:800;font-size:14px;background:#fff}
 </style>
 </head>
 <body>
@@ -231,6 +243,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { useState, useEffect, useRef, useCallback, createElement as h, Fragment } from 'https://esm.sh/react@18';
 import { createRoot } from 'https://esm.sh/react-dom@18/client';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LS_CFG = 'wagaya_firebase_cfg_v1';
@@ -273,6 +286,7 @@ const vS = i => i&&typeof i.id==='string'&&typeof i.text==='string';
 const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
 const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
 const vN = n => n && typeof n.id==='string' && typeof n.text==='string' && n.text.length>0;
+const vT = t => t && typeof t.id==='string' && typeof t.t==='string' && typeof t.c==='string';
 
 // ── Config persistence ────────────────────────────────────────────────────────
 const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
@@ -512,6 +526,7 @@ function MainApp({ db, onReset }) {
   const [shopping, setShopping] = useState([]);
   const [shopCats, setShopCats] = useState(DEF_CATS);
   const [notes,    setNotes]    = useState([]);
+  const [tasks, setTasks] = useState([]);
 
   // ── お知らせポップアップ ──────────────────────────────────────────────────
   const [popup,       setPopup]       = useState(null);  // { items: [{icon,text}] }
@@ -568,9 +583,9 @@ function MainApp({ db, onReset }) {
     } catch {}
 
     // 掲示板の未読
-    const unread = notes.filter(n => !n.archived);
+    const unread = tasks.filter(t => t.c !== 'done');
     if (unread.length > 0) {
-      items.push({ icon:'📝', text:`掲示板の未読メッセージ ${unread.length}件` });
+      items.push({ icon:'📋', text:`カンバン 未完了タスク ${unread.length}件` });
     }
 
     if (items.length > 0) setPopup({ items });
@@ -584,6 +599,7 @@ function MainApp({ db, onReset }) {
 
   // Track writes to avoid echo
   const writing = useRef({});
+  const loaded = useRef({});
 
   // ── Firebase listeners ────────────────────────────────────────────────────
   useEffect(() => {
@@ -593,6 +609,7 @@ function MainApp({ db, onReset }) {
       const r = ref(db, `${DB_PATH}/${path}`);
       const u = onValue(r, snap => {
         if (writing.current[path]) return; // skip echo of own write
+        loaded.current[path] = true;
         const v = snap.val();
         if (v === null) { setter(def); setSynced(true); return; }
         const arr = safeArr(Object.values(v), validator);
@@ -607,6 +624,7 @@ function MainApp({ db, onReset }) {
     listen('shopping', setShopping, vS, []);
     listen('shopCats', setShopCats, vC, DEF_CATS);
     listen('notes',    setNotes,    vN, []);
+    listen('tasks', setTasks, vT, []);
     return () => unsubs.forEach(u => u());
   }, [db]);
 
@@ -627,14 +645,22 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('budget',   budget);   }, [budget]);
   useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
   useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
-  useEffect(() => { if (synced) writeDb('notes',    notes);    }, [notes]);
+  useEffect(() => { if (synced) writeDb('tasks', tasks); }, [tasks]);
+  // 旧・掲示板の未読メッセージを、一度だけ To Do に引き継ぐ
+  useEffect(() => {
+    if (!loaded.current.tasks || !loaded.current.notes) return;
+    try { if (localStorage.getItem('wagaya_board_migrated_v1')) return; localStorage.setItem('wagaya_board_migrated_v1','1'); } catch { return; }
+    const have = new Set(tasks.map(t => t.id));
+    const add = notes.filter(n => !n.archived && !have.has(n.id)).map(n => ({ id:n.id, t:clean(n.text,60), m:n.memberId, p:1, c:'todo', ts:n.ts||Date.now() }));
+    if (add.length) setTasks(p => [...p, ...add]);
+  }, [notes, tasks, synced]);
 
   const TABS = [
     { k:'menu',   label:'🍽 献立' },
     { k:'shop',   label:'🛒 買い物' },
     { k:'cal',    label:'📅 予定' },
     { k:'budget', label:'💰 家計' },
-    { k:'board',  label:'📝 掲示板' },
+    { k:'board',  label:'📋 タスク' },
     { k:'cfg',    label:'⚙️' },
   ];
 
@@ -684,13 +710,13 @@ function MainApp({ db, onReset }) {
     ),
     // Content — with 3D perspective slide on tab change
     h('div', { className:'content', key:tab,
-      style:{}
+      style: tab==='board' ? { padding:0, overflow:'hidden', position:'relative' } : {}
     },
       tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
       tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
       tab==='cal'    && h(CalTab,    { events, setEvents, members }),
       tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
-      tab==='board'  && h(BoardTab,  { notes, setNotes, members }),
+      tab==='board'  && h(TaskTab,  { tasks, setTasks, members }),
       tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
     ),
   );
@@ -1667,154 +1693,126 @@ function BudgetRow({ b, members, onEdit, onDel, onDup }) {
   );
 }
 
-// ═══════════════════════ BOARD (SWIPE) ═══════════════════════════════════════
-function BoardTab({ notes, setNotes, members }) {
-  const [text,    setText]    = useState('');
-  const [memId,   setMemId]   = useState(members[0]?.id ?? '');
-  const [showArc, setShowArc] = useState(false);
-  const [showPost,setShowPost]= useState(false);
-  const [idx, setIdx] = useState(0);
 
-  useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
+// ═══════════════════════ TASK KANBAN (3D) ════════════════════════════════════
+const TK_COL=[{id:'todo',n:'To Do',c:'#FF8050'},{id:'doing',n:'Doing',c:'#A855F7'},{id:'done',n:'Done',c:'#4CAF50'}];
+const TK_PRI=['低','中','高'];
+const TK_FONT="'M PLUS Rounded 1c',-apple-system,'Hiragino Sans',sans-serif";
+const TK_TOP=52;
 
-  const unread   = [...notes].filter(n => !n.archived).sort((a,b) => b.ts - a.ts);
-  const archived = [...notes].filter(n =>  n.archived).sort((a,b) => b.ts - a.ts);
-  const safeIdx = unread.length > 0 ? idx % unread.length : 0;
-  const top = unread[safeIdx] ?? null;
+function createBoard(cvs,root,st){
+  const TH={bg:'#F4F1EE',lane:'#EAE4DC',ink:'#1E1E1E',sub:'#8a8a8a',card:'#FFFFFF'};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const R=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
+  R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.setClearColor(TH.bg);
+  const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(24,1,10,6000);
+  const sun=new THREE.DirectionalLight(0xffffff,.47);sun.position.set(-250,350,900);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0004;
+  S.add(new THREE.AmbientLight(0xffffff,.58),sun,sun.target);
+  const DEPTH=14,cards=new Map();
+  let L={},scrollY=0,P=null,lanes=[],heads=[],raf=0,ver=0;
+  const mem=id=>{const a=st.current.members;return a.find(m=>m.id===id)||a[0]||{name:'',emoji:'👤',color:'#78909C'}};
+  const visible=c=>st.current.tasks.filter(t=>t.c===c&&(st.current.fil==='all'||t.m===st.current.fil));
+  const K=()=>Math.max(2,Math.min(devicePixelRatio,3));
+  const cv2=(w,h)=>{const c=document.createElement('canvas'),k=K();c.width=w*k;c.height=h*k;const x=c.getContext('2d');x.scale(k,k);return[c,x]};
+  function rr(w,h,r){const s=new THREE.Shape(),x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+  function geo(w,h){const g=new THREE.ExtrudeGeometry(rr(w,h,10),{depth:DEPTH,bevelEnabled:false,curveSegments:6}),p=g.attributes.position,u=g.attributes.uv;for(let i=0;i<p.count;i++)u.setXY(i,(p.getX(i)+w/2)/w,(p.getY(i)+h/2)/h);return g}
+  function wrap(x,t,mw,ml){const a=[];let c='';for(const ch of t){if(x.measureText(c+ch).width>mw&&c){a.push(c);c=ch}else c+=ch}if(c)a.push(c);if(a.length>ml){a.length=ml;a[ml-1]=a[ml-1].slice(0,-1)+'…'}return a}
+  function cardTex(t){const[c,x]=cv2(L.cw,L.ch),m=mem(t.m),done=t.c==='done',fs=L.fs;
+    x.fillStyle=TH.card;x.fillRect(0,0,L.cw,L.ch);x.fillStyle=m.color;x.fillRect(0,0,7,L.ch);
+    x.globalAlpha=done?.55:1;x.fillStyle=TH.ink;x.font=`700 ${fs}px ${TK_FONT}`;x.textBaseline='top';
+    wrap(x,t.t,L.cw-32,3).forEach((l,i)=>{const y=10+i*fs*1.3;x.fillText(l,17,y);if(done)x.fillRect(17,y+fs*.55,x.measureText(l).width,1.6)});
+    const mf=Math.max(11,Math.round(fs*.82)),my=L.ch-mf-10;x.font=`700 ${mf}px ${TK_FONT}`;
+    x.fillStyle=m.color;x.fillText(m.emoji+' '+m.name,17,my,L.cw-58);
+    x.textAlign='right';x.fillStyle=t.p===2?'#FF5E8A':TH.sub;x.fillText(TK_PRI[t.p]||'',L.cw-10,my);
+    if(done){x.fillStyle=TK_COL[2].c;x.font=`800 ${fs+2}px ${TK_FONT}`;x.fillText('✓',L.cw-10,8)}
+    const tx=new THREE.CanvasTexture(c);tx.anisotropy=4;return tx}
+  function headTex(col,n){const[c,x]=cv2(L.colW,L.hh);x.fillStyle=TH.lane;x.fillRect(0,0,L.colW,L.hh);x.fillStyle=col.c;x.beginPath();x.arc(18,L.hh/2,6,0,7);x.fill();
+    x.fillStyle=TH.ink;x.textBaseline='middle';x.font=`800 16px ${TK_FONT}`;x.fillText(col.n,31,L.hh/2+1);x.textAlign='right';x.fillStyle=TH.sub;x.fillText(n,L.colW-12,L.hh/2+1);return new THREE.CanvasTexture(c)}
+  const laneX=i=>L.pad+L.colW/2+i*(L.colW+L.gap)-L.W/2,slotY=i=>L.H/2-(L.top+4+L.hh+8+i*(L.ch+L.gapY)+L.ch/2-scrollY);
+  const maxS=()=>Math.max(0,Math.max(...TK_COL.map(c=>visible(c.id).length))*(L.ch+L.gapY)+L.hh+8+100-(L.H-L.top-8));
+  const laneAt=px=>clamp(Math.floor((px-L.pad+L.gap/2)/(L.colW+L.gap)),0,2);
+  function kill(o){S.remove(o.g);o.m.geometry.dispose();o.m.material.forEach(m=>{m.map&&m.map.dispose();m.dispose()})}
+  function mk(t,key){const g=new THREE.Group(),me=new THREE.Mesh(geo(L.cw,L.ch),[new THREE.MeshLambertMaterial({map:cardTex(t)}),new THREE.MeshLambertMaterial({color:mem(t.m).color})]);
+    me.castShadow=true;me.userData.id=t.id;g.add(me);S.add(g);return{g,m:me,key,t,fresh:true}}
+  function retarget(snap){cards.forEach(o=>{o.tx=laneX(o.ci);o.ty=slotY(o.i);if(snap||o.fresh){if(!(P&&P.mode==='drag'&&P.o===o))o.g.position.set(o.tx,o.ty,0);o.fresh=false}})}
+  function sync(){if(!L.W)return;const seen=new Set();
+    TK_COL.forEach((col,ci)=>visible(col.id).forEach((t,i)=>{seen.add(t.id);const m=mem(t.m),key=[t.t,t.m,m.name,m.emoji,m.color,t.p,t.c,L.cw,L.ch,ver].join('|');let o=cards.get(t.id);
+      if(!o||o.key!==key){const old=o;o=mk(t,key);if(old){o.g.position.copy(old.g.position);o.g.rotation.copy(old.g.rotation);o.fresh=false;kill(old)}cards.set(t.id,o)}
+      o.t=t;o.ci=ci;o.i=i;o.hold=false}));
+    cards.forEach((o,id)=>{if(!seen.has(id)){kill(o);cards.delete(id)}});
+    scrollY=clamp(scrollY,0,maxS());retarget(false);
+    heads.forEach((h,i)=>{if(h.material.map)h.material.map.dispose();h.material.map=headTex(TK_COL[i],visible(TK_COL[i].id).length);h.material.needsUpdate=true})}
+  function build(){L.W=root.clientWidth;L.H=root.clientHeight;if(!L.W||!L.H)return;R.setSize(L.W,L.H);
+    L.top=TK_TOP;L.pad=8;L.gap=8;L.colW=(L.W-2*L.pad-2*L.gap)/3;L.cw=Math.round(L.colW-12);L.fs=Math.round(clamp(L.colW/9.5,13,17));L.ch=Math.round(L.fs*3.9+46);L.gapY=10;L.hh=44;
+    const d=L.H/(2*Math.tan(12*Math.PI/180));cam.aspect=L.W/L.H;cam.position.set(0,0,d);cam.updateProjectionMatrix();
+    const sc=sun.shadow.camera,e=Math.max(L.W,L.H);sc.left=sc.bottom=-e;sc.right=sc.top=e;sc.near=1;sc.far=3000;sc.updateProjectionMatrix();
+    lanes.concat(heads).forEach(m=>{S.remove(m);m.geometry.dispose();m.material.map&&m.material.map.dispose();m.material.dispose()});lanes=[];heads=[];
+    const lh=L.H-L.top-12;
+    TK_COL.forEach((c,i)=>{const l=new THREE.Mesh(new THREE.PlaneGeometry(L.colW,lh),new THREE.MeshLambertMaterial({color:TH.lane}));l.position.set(laneX(i),L.H/2-(L.top+4+lh/2),-.5);l.receiveShadow=true;S.add(l);lanes.push(l);
+      const h=new THREE.Mesh(new THREE.PlaneGeometry(L.colW,L.hh),new THREE.MeshLambertMaterial());h.position.set(laneX(i),L.H/2-(L.top+4+L.hh/2),DEPTH+2);S.add(h);heads.push(h)});
+    cards.forEach(kill);cards.clear();sync()}
+  const pt=e=>{const r=cvs.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  const rc=new THREE.Raycaster(),v2=new THREE.Vector2();
+  function pick(px,py){if(py<L.top+4+L.hh)return null;v2.set(px/L.W*2-1,-(py/L.H)*2+1);rc.setFromCamera(v2,cam);const h=rc.intersectObjects([...cards.values()].map(o=>o.m))[0];return h?cards.get(h.object.userData.id):null}
+  const hl=ci=>lanes.forEach((l,i)=>{l.material.color.set(TH.lane);if(i===ci)l.material.color.lerp(new THREE.Color(TK_COL[i].c),.2)});
+  function moveTask(id,col,idx){const cur=st.current.tasks,t=cur.find(x=>x.id===id);if(!t)return;const list=visible(col).filter(x=>x.id!==id),rest=cur.filter(x=>x.id!==id),nt={...t,c:col},ref=list[idx];if(ref)rest.splice(rest.findIndex(x=>x.id===ref.id),0,nt);else rest.push(nt);st.current.setTasks(rest)}
+  cvs.addEventListener('pointerdown',e=>{if(P)return;cvs.setPointerCapture(e.pointerId);const[px,py]=pt(e),o=pick(px,py);P={o,x0:px,y0:py,cx:px,cy:py,lx:px,ly:py,sy:scrollY,mode:'wait'};if(o){P.ox=o.g.position.x-(px-L.W/2);P.oy=o.g.position.y-(L.H/2-py)}});
+  cvs.addEventListener('pointermove',e=>{if(!P)return;const[px,py]=pt(e),dx=px-P.lx,dy=py-P.ly;P.lx=px;P.ly=py;P.cx=px;P.cy=py;
+    if(P.mode==='wait'&&Math.hypot(px-P.x0,py-P.y0)>8){P.mode=P.o?'drag':'scroll';if(P.o)P.o.g.scale.setScalar(1.05)}
+    if(P.mode==='drag'){const g=P.o.g;g.position.set(px-L.W/2+P.ox,L.H/2-py+P.oy,50);g.rotation.y=clamp(g.rotation.y+dx*.012,-.45,.45);g.rotation.x=clamp(g.rotation.x+dy*.012,-.45,.45);hl(laneAt(g.position.x+L.W/2))}
+    else if(P.mode==='scroll'){scrollY=clamp(P.sy-(py-P.y0),0,maxS());retarget(true)}});
+  function end(e){if(!P)return;const p=P;P=null;hl(-1);
+    if(p.mode==='drag'){const g=p.o.g;g.scale.setScalar(1);p.o.hold=true;setTimeout(()=>{p.o.hold=false},400);
+      const ci=laneAt(g.position.x+L.W/2),py=L.H/2-g.position.y,list=visible(TK_COL[ci].id).filter(x=>x.id!==p.o.t.id),py0=L.top+4+L.hh+8+L.ch/2-scrollY;
+      moveTask(p.o.t.id,TK_COL[ci].id,clamp(Math.round((py-py0)/(L.ch+L.gapY)),0,list.length))}
+    else if(p.mode==='wait'&&p.o&&e.type==='pointerup')st.current.open(p.o.t)}
+  cvs.addEventListener('pointerup',end);cvs.addEventListener('pointercancel',end);
+  cvs.addEventListener('wheel',e=>{e.preventDefault();scrollY=clamp(scrollY+e.deltaY,0,maxS());retarget(true)},{passive:false});
+  function frame(){raf=requestAnimationFrame(frame);
+    if(P&&P.mode==='drag'){const y=P.cy,d=y>L.H-100?10:y<L.top+L.hh+60?-10:0;if(d){const n=clamp(scrollY+d,0,maxS());if(n!==scrollY){scrollY=n;retarget(false)}}}
+    cards.forEach(o=>{const g=o.g;g.rotation.x*=.85;g.rotation.y*=.85;g.rotation.z*=.85;if(o.hold||(P&&P.mode==='drag'&&P.o===o))return;g.position.x+=(o.tx-g.position.x)*.25;g.position.y+=(o.ty-g.position.y)*.25;g.position.z*=.75});
+    R.render(S,cam)}
+  const ro=new ResizeObserver(()=>build());ro.observe(root);build();frame();
+  return{sync,retex:()=>{ver++;sync()},destroy:()=>{cancelAnimationFrame(raf);ro.disconnect();cards.forEach(kill);R.dispose();R.forceContextLoss()}}
+}
 
-  const fmtTime = ts => {
-    const d = new Date(ts), now = new Date(), diff = (now - d) / 1000;
-    if (diff < 60)    return 'たった今';
-    if (diff < 3600)  return Math.floor(diff/60)+'分前';
-    if (diff < 86400) return Math.floor(diff/3600)+'時間前';
-    return (d.getMonth()+1)+'/'+d.getDate();
-  };
-
-  const post = () => {
-    const t = clean(text, 200);
-    if (!t || notes.length >= 300) return;
-    setNotes(p => [...p, { id:uid(), text:t, memberId:memId, ts:Date.now(), archived:false }]);
-    setText(''); setShowPost(false);
-  };
-
-  const goNext = () => { if (unread.length <= 1) return; setIdx(i => (i+1) % unread.length); };
-  const archiveCurrent = () => {
-    if (!top) return;
-    setNotes(p => p.map(n => n.id===top.id ? {...n, archived:true} : n));
-  };
-
-  const cardRef = useRef(null), dragState = useRef(null);
-  const labelKeepRef = useRef(null), labelDoneRef = useRef(null);
-  const onStart = cx => { dragState.current = { startX:cx, dx:0 }; };
-  const onMove  = cx => {
-    if (!dragState.current || !cardRef.current) return;
-    const dx = cx - dragState.current.startX; dragState.current.dx = dx;
-    cardRef.current.style.transform = `translateX(${dx}px) rotate(${dx*0.06}deg)`;
-    const pct = Math.min(Math.abs(dx)/80, 1);
-    if (labelKeepRef.current) labelKeepRef.current.style.opacity = dx < -18 ? pct : 0;
-    if (labelDoneRef.current) labelDoneRef.current.style.opacity = dx >  18 ? pct : 0;
-  };
-  const onEnd = () => {
-    if (!dragState.current || !cardRef.current) return;
-    const dx = dragState.current.dx; dragState.current = null;
-    if (labelKeepRef.current) labelKeepRef.current.style.opacity = 0;
-    if (labelDoneRef.current) labelDoneRef.current.style.opacity = 0;
-    if (Math.abs(dx) > 80) {
-      const dir = dx > 0 ? 1 : -1;
-      cardRef.current.style.transition = 'transform .28s ease, opacity .28s';
-      cardRef.current.style.transform  = `translateX(${dir*440}px) rotate(${dir*16}deg)`;
-      cardRef.current.style.opacity    = '0';
-      setTimeout(() => {
-        if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; cardRef.current.style.opacity=''; }
-        if (dx > 0) archiveCurrent(); else goNext();
-      }, 280);
-    } else {
-      cardRef.current.style.transition = 'transform .25s cubic-bezier(.25,1.4,.5,1)';
-      cardRef.current.style.transform  = '';
-      setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 260);
-    }
-  };
-  const onTouchStart = e => onStart(e.touches[0].clientX);
-  const onTouchMove  = e => { e.preventDefault(); onMove(e.touches[0].clientX); };
-  const onMouseDown  = e => {
-    onStart(e.clientX);
-    const mv = e2 => onMove(e2.clientX);
-    const up = () => { onEnd(); window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); };
-    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
-  };
-
-  return h(Fragment, null,
-    h('div', { style:{display:'flex',alignItems:'center',gap:10,marginBottom:14} },
-      h('div', { style:{flex:1,fontSize:13,color:'#AAA',fontWeight:700} },
-        unread.length > 0 ? `未読 ${unread.length}件` : 'すべて読みました！'),
-      h('button', { style:{padding:'9px 18px',background:'linear-gradient(135deg,#FF8050,#FF5E8A)',color:'#fff',borderRadius:14,fontSize:14,fontWeight:800,boxShadow:'0 3px 12px rgba(255,94,138,.3)'},
-        onClick:()=>setShowPost(p=>!p) }, showPost ? '✕ 閉じる' : '✏️ 投稿する'),
-    ),
-    showPost && h('div', { className:'board-post-card fi', style:{marginBottom:12} },
-      h('textarea',{className:'field',style:{minHeight:90,resize:'none',marginBottom:10},placeholder:'家族へのメッセージを書いてください…',maxLength:200,value:text,onChange:e=>setText(e.target.value)}),
-      h('div', { style:{marginBottom:10} },
-        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 投稿者'),
-        h('div', { className:'chips' },
-          members.map(m => h('button', { key:m.id, className:'m-chip',
-            style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
-            onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
-        ),
-      ),
-      h('button', { className:'btn btn-grad', style:{boxShadow:'none'}, onClick:post, disabled:!text.trim() }, '投稿する'),
-    ),
-    h('div', { className:'board-stack' },
-      unread.length > 2 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(12px) scale(.88)',boxShadow:'0 4px 16px rgba(0,0,0,.08)'} }),
-      unread.length > 1 && h('div', { style:{position:'absolute',inset:0,background:'#fff',borderRadius:24,transform:'translateY(6px) scale(.94)',boxShadow:'0 4px 20px rgba(0,0,0,.10)'} }),
-      top ? h('div', { key:top.id, ref:cardRef, className:'board-card', onTouchStart, onTouchMove, onTouchEnd:onEnd, onMouseDown },
-        h('span', { ref:labelKeepRef, className:'swipe-label keep' }, '← あとで'),
-        h('span', { ref:labelDoneRef, className:'swipe-label done' }, '既読 →'),
-        h('div', { className:'board-who' },
-          h('div', { className:'board-avatar', style:{background:(members.find(m=>m.id===top.memberId)?.color??'#ccc')+'22'} },
-            members.find(m=>m.id===top.memberId)?.emoji ?? '👤'),
-          h('div', null, h('div', { className:'board-name' }, members.find(m=>m.id===top.memberId)?.name ?? '')),
-          h('div', { className:'board-time' }, fmtTime(top.ts)),
-        ),
-        unread.length > 1 && h('div', { style:{fontSize:11,color:'#CCC',fontWeight:700,marginBottom:8} }, `${safeIdx+1} / ${unread.length}`),
-        h('div', { className:'board-body' }, top.text),
-        h('div', { className:'board-hint' },
-          h('span', { className:'hint-left' }, '← あとで'),
-          h('span', { className:'hint-right' }, '既読 →'),
-        ),
-      ) : h('div', { className:'board-empty' },
-        h('div', { className:'board-empty-ico' }, notes.length > 0 ? '🎉' : '📭'),
-        notes.length > 0 ? 'すべて読みました！' : 'メッセージはありません',
-      ),
-    ),
-    unread.length > 1 && h('div', { className:'board-count' },
-      Array(Math.min(unread.length,7)).fill(null).map((_,i) =>
-        h('div', { key:i, className:'board-pip'+(i===safeIdx%Math.min(unread.length,7)?' on':'') })
-      )
-    ),
-    top && h('div', { style:{display:'flex',gap:10,width:'100%',marginTop:8} },
-      h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#E8F0FF',color:'#3B5BDB',fontSize:14,fontWeight:800,border:'none'}, onClick:goNext }, '← あとで'),
-      h('button', { style:{flex:1,padding:'13px',borderRadius:14,background:'#FFF0F5',color:'#FF5E8A',fontSize:14,fontWeight:800,border:'none'}, onClick:archiveCurrent }, '既読 →'),
-    ),
-    archived.length > 0 && h(Fragment, null,
-      h('button', { className:'btn btn-ghost', style:{marginTop:16,width:'100%'}, onClick:()=>setShowArc(p=>!p) },
-        showArc ? '▲ 既読を隠す' : `▼ 既読を見る（${archived.length}件）`),
-      showArc && h('div', { className:'board-archived card fi' },
-        h('div', { className:'card-label' }, '既読メッセージ'),
-        archived.map(n => {
-          const m = members.find(x=>x.id===n.memberId)??members[0];
-          return h('div', { key:n.id, className:'arc-row' },
-            h('div', { style:{fontSize:22,flexShrink:0} }, m?.emoji),
-            h('div', { style:{flex:1,minWidth:0} },
-              h('div', { style:{fontSize:14,lineHeight:1.5,color:'#555'} }, n.text),
-              h('div', { style:{fontSize:11,color:'#BBB',marginTop:3} }, m?.name+' · '+fmtTime(n.ts)),
-            ),
-            h('button', { style:{color:'#DDD',fontSize:13,padding:'2px 5px',flexShrink:0}, title:'未読に戻す',
-              onClick:()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,archived:false}:x)) }, '↩'),
-            h('button', { style:{color:'#DDD',fontSize:15,padding:'2px 4px',flexShrink:0},
-              onClick:()=>setNotes(p=>p.filter(x=>x.id!==n.id)) }, '✕'),
-          );
-        })
-      ),
-    ),
+function TaskTab({ tasks, setTasks, members }) {
+  const rootRef=useRef(null),cvRef=useRef(null),api=useRef(null);
+  const [fil,setFil]=useState('all');
+  const [sh,setSh]=useState(null);
+  const st=useRef({});
+  const openSheet=t=>setSh({id:t?t.id:null,t:t?t.t:'',m:t?t.m:(st.current.fil!=='all'?st.current.fil:(members[0]?.id??'')),p:t?t.p:1,c:t?t.c:'todo',arm:false});
+  st.current={tasks,members,fil,setTasks,open:openSheet};
+  useEffect(()=>{const a=createBoard(cvRef.current,rootRef.current,st);api.current=a;
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>api.current&&api.current.retex());
+    return()=>{a.destroy();api.current=null}},[]);
+  useEffect(()=>{api.current&&api.current.sync()},[tasks,members,fil]);
+  const upd=k=>v=>setSh(p=>({...p,[k]:v,arm:false}));
+  const save=()=>{const title=clean(sh.t,60);if(!title)return;
+    if(sh.id){setTasks(p=>{const old=p.find(x=>x.id===sh.id);if(!old)return p;const nt={...old,t:title,m:sh.m,p:sh.p,c:sh.c};return old.c!==sh.c?[...p.filter(x=>x.id!==sh.id),nt]:p.map(x=>x.id===sh.id?nt:x)})}
+    else if(tasks.length<LIM.items)setTasks(p=>[...p,{id:uid(),t:title,m:sh.m,p:sh.p,c:'todo',ts:Date.now()}]);
+    setSh(null)};
+  const del=()=>{if(!sh.arm){setSh(p=>({...p,arm:true}));return}setTasks(p=>p.filter(x=>x.id!==sh.id));setSh(null)};
+  const sc=(on,c)=>({borderColor:on?c:'#E5E5E5',background:on?c+'1A':'#fff',color:on?c:'#666'});
+  return h('div',{ref:rootRef,style:{position:'absolute',inset:0,overflow:'hidden',background:'#F4F1EE'}},
+    h('canvas',{ref:cvRef,style:{position:'absolute',inset:0,width:'100%',height:'100%',display:'block',touchAction:'none'}}),
+    h('div',{className:'tk-chips'},
+      [{id:'all',name:'すべて',emoji:'🗂',color:'#333'},...members].map(m=>h('button',{key:m.id,className:'chip',style:sc(fil===m.id,m.color),onClick:()=>setFil(m.id)},(m.emoji?m.emoji+' ':'')+m.name))),
+    tasks.length===0&&h('div',{className:'tk-empty'},'タスクはまだありません\n右下の「＋ タスク追加」から始めましょう'),
+    h('button',{className:'tk-fab',onClick:()=>openSheet(null)},'＋ タスク追加'),
+    sh&&h('div',{className:'tk-back',onClick:()=>setSh(null)},
+      h('div',{className:'tk-sheet',onClick:e=>e.stopPropagation()},
+        h('div',{style:{fontSize:17,fontWeight:800,marginBottom:12}},sh.id?'タスクを編集':'タスクを追加'),
+        h('input',{className:'field',style:{margin:0,fontSize:16},autoFocus:!sh.id,placeholder:'例：夕食の買い物',maxLength:60,value:sh.t,onChange:e=>upd('t')(e.target.value),onKeyDown:e=>e.key==='Enter'&&save()}),
+        h('div',{className:'tk-lb'},'👤 担当'),
+        h('div',{className:'tk-row'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:sc(sh.m===m.id,m.color),onClick:()=>upd('m')(m.id)},m.emoji+' '+m.name))),
+        h('div',{className:'tk-lb'},'優先度'),
+        h('div',{className:'tk-row'},TK_PRI.map((n,i)=>h('button',{key:n,className:'m-chip',style:sc(sh.p===i,'#FF5E8A'),onClick:()=>upd('p')(i)},n))),
+        sh.id&&h(Fragment,null,h('div',{className:'tk-lb'},'状態'),
+          h('div',{className:'tk-row'},TK_COL.map(c=>h('button',{key:c.id,className:'m-chip',style:sc(sh.c===c.id,c.c),onClick:()=>upd('c')(c.id)},c.n)))),
+        h('div',{className:'tk-act'},
+          sh.id&&h('button',{className:'tk-del',onClick:del},sh.arm?'もう一度タップで削除':'削除'),
+          h('button',{className:'btn btn-grad',style:{flex:2},onClick:save},'保存'))))
   );
 }
 
