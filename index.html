@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#FF8050"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="わが家の手帳"/>
+<title>わが家の手帳</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%}
+body{font-family:'M PLUS Rounded 1c',sans-serif;background:#F4F1EE;color:#1E1E1E;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+input,select,textarea,button{font-family:inherit}
+input:focus,select:focus{outline:2px solid #FF5E8A;outline-offset:1px}
+button{cursor:pointer;border:none;background:none}
+a{color:inherit}
+
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes rouletteTick{0%{transform:scale(1.15);opacity:.7}100%{transform:scale(1);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes checkBounce{0%{transform:scale(0);opacity:0}55%{transform:scale(1.35)}100%{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes aurora{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 8px rgba(255,94,138,.4)}50%{box-shadow:0 0 16px rgba(255,94,138,.7)}}
+@keyframes tabPop{0%{transform:scale(1)}40%{transform:scale(.94)}70%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes borderRotate{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.su{animation:slideUp .22s ease both}
+.fi{animation:fadeIn .18s ease both}
+.spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+
+/* Shell */
+.shell{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:#F4F1EE}
+
+/* Header */
+.hdr{background:linear-gradient(135deg,#FF8050 0%,#FF5E8A 55%,#A855F7 100%);padding:14px 18px 0;flex-shrink:0;box-shadow:0 3px 20px rgba(255,94,138,.28)}
+.hdr-top{display:flex;align-items:center;gap:8px;margin-bottom:13px}
+.hdr-title{color:#fff;font-size:17px;font-weight:800;flex:1;letter-spacing:.3px}
+.hdr-members{display:flex;gap:1px}
+.hdr-members span{font-size:20px}
+.sync-pill{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.18);font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.sync-dot{width:7px;height:7px;border-radius:50%}
+
+/* Tabs */
+.tabs{display:flex;gap:5px;padding-bottom:13px}
+.tab{flex:1;padding:8px 2px;border-radius:11px;font-size:12px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(255,255,255,.14);transition:all .18s;letter-spacing:.1px}
+.tab.on{background:#fff;color:#FF5E8A;box-shadow:0 2px 10px rgba(0,0,0,.12);animation:tabPop .3s cubic-bezier(.25,1.4,.5,1)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:13px 13px 30px}
+
+/* Cards */
+.card{background:#fff;border-radius:18px;padding:15px;margin-bottom:11px;box-shadow:0 2px 12px rgba(0,0,0,.055)}
+.card-label{font-size:10px;font-weight:800;color:#AAA;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+
+/* Field */
+.field{width:100%;padding:12px 14px;border:2px solid #EBEBEB;border-radius:12px;font-size:15px;background:#FAFAFA;color:#1E1E1E;margin-bottom:10px;transition:border-color .15s}
+.field:focus{border-color:#FF5E8A;background:#fff}
+.field-mono{font-family:monospace;font-size:13px;word-break:break-all}
+
+/* Buttons */
+.btn{width:100%;padding:13px;border-radius:14px;font-size:15px;font-weight:800;letter-spacing:.2px;transition:transform .1s,opacity .1s}
+.btn:active{transform:scale(.97);opacity:.9}
+.btn:disabled{opacity:.5;transform:none}
+.btn-grad{background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;box-shadow:0 4px 14px rgba(255,94,138,.32)}
+.btn-purple{background:linear-gradient(135deg,#FF8050,#A855F7);color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.28)}
+.btn-ghost{background:none;border:2px dashed #DDD;color:#AAA}
+.btn-ghost.warn{border-color:#FFB3C6;color:#FF5E8A}
+
+/* Chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:6px 13px;border-radius:20px;border:2px solid #E5E5E5;font-size:12px;font-weight:700;color:#888;background:#fff;transition:all .15s;white-space:nowrap}
+.chip-row{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.m-chip{padding:7px 12px;border-radius:20px;border:2px solid #E5E5E5;font-size:13px;font-weight:600;background:#fff;transition:all .15s}
+.toggle{padding:7px 16px;border-radius:20px;border:2px solid #E5E5E5;font-size:13px;font-weight:700;background:#fff;color:#999;transition:all .15s}
+.toggle.on{border-color:#4CAF50;background:#e8f5e9;color:#4CAF50}
+
+/* Shopping */
+.shop-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid #F2F2F2;transition:opacity .2s}
+.shop-item:last-child{border-bottom:none}
+.shop-item.done{opacity:.38}
+.chk{width:27px;height:27px;border-radius:50%;border:2.5px solid #DDD;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s}
+.chk.on{background:#4CAF50;border-color:#4CAF50;animation:pop .28s ease}
+.chk-icon{color:#fff;font-size:15px;font-weight:900;animation:checkBounce .22s ease}
+.shop-txt{flex:1;font-size:15px;font-weight:500}
+.shop-txt.done{text-decoration:line-through;color:#BBB}
+.shop-who{font-size:11px;font-weight:800;flex-shrink:0}
+.del{color:#DDD;font-size:17px;padding:3px 5px;flex-shrink:0;border-radius:7px;transition:color .12s}
+.del:active{color:#FF5E8A}
+.cat-group{background:#fff;border-radius:18px;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.055)}
+.cat-hdr{display:flex;align-items:center;gap:8px;padding:11px 15px 9px;border-bottom:1px solid #F5F5F5}
+.cat-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.cat-name{font-size:14px;font-weight:800;flex:1}
+.cat-cnt{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:800}
+.cat-items{padding:0 15px}
+
+/* Palette */
+.palette{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.pal-dot{width:30px;height:30px;border-radius:50%;border:3px solid transparent;transition:transform .12s;cursor:pointer}
+.pal-dot:active{transform:scale(.82)}
+.pal-dot.on{border-color:#1E1E1E}
+
+/* Calendar */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.cal-arr{width:38px;height:38px;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:19px;font-weight:900;color:#FF5E8A;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+.cal-arr:active{transform:scale(.88)}
+.cal-mo{font-weight:800;font-size:18px}
+.cal-grid{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.055);margin-bottom:12px}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:linear-gradient(135deg,#FF8050,#FF5E8A)}
+.cal-dow{text-align:center;padding:7px 0;font-size:11px;font-weight:800;color:rgba(255,255,255,.82)}
+.cal-dow.s{color:#FFD0D0}.cal-dow.sa{color:#C8E6FF}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:#F0F0F0}
+.cal-cell{background:#fff;min-height:50px;padding:5px 4px 4px;cursor:pointer;user-select:none}
+.cal-cell:active,.cal-cell.sel{background:#FFF0F8}
+.cal-cell.empty{background:#FAFAFA;cursor:default}
+.cal-num{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-bottom:3px}
+.cal-num.today{background:#FF5E8A;color:#fff;font-weight:800;animation:glowPulse 2s ease-in-out infinite}
+.cal-num.s{color:#E53935}.cal-num.sa{color:#1E88E5}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px}
+.cal-dot{width:5px;height:5px;border-radius:50%}
+.ev-row{display:flex;align-items:flex-start;gap:9px;padding:11px 0;border-bottom:1px solid #F2F2F2}
+.ev-row:last-child{border-bottom:none}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:800}
+.badge-t{background:#FF5E8A18;color:#FF5E8A}
+.badge-all{background:#4CAF5018;color:#4CAF50}
+
+/* Budget */
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sum-card{background:#fff;border-radius:14px;padding:12px 6px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.055)}
+.b-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F2F2F2}
+.b-row:last-child{border-bottom:none}
+.b-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.bar-row{margin-bottom:9px}
+.bar-lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.bar-track{background:#F0F0F0;border-radius:4px;height:7px}
+.bar-fill{height:100%;border-radius:4px;transition:width .55s cubic-bezier(.4,0,.2,1)}
+
+/* Common */
+.m-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F2F2F2}
+.m-row:last-child{border-bottom:none}
+.sep{display:flex;align-items:center;gap:8px;margin:12px 0 10px;font-size:10px;font-weight:800;color:#BBB;letter-spacing:.8px;text-transform:uppercase}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:#EBEBEB}
+.empty{text-align:center;padding:26px 0 18px;color:#CCC;font-size:14px;line-height:1.9}
+.empty-ico{font-size:36px;display:block;margin-bottom:6px}
+.type-row{display:flex;gap:8px;margin-bottom:10px}
+.type-btn{flex:1;padding:10px;border-radius:12px;border:2px solid #E5E5E5;font-size:13px;font-weight:700;background:#fff;transition:all .15s}
+.type-btn.on{border-color:#FF5E8A;background:#FFF0F5;color:#FF5E8A}
+
+/* Info boxes */
+.box{border-radius:13px;padding:13px 14px;font-size:13px;line-height:1.8;margin-bottom:11px}
+.box strong{display:block;font-size:14px;margin-bottom:4px}
+.box-yellow{background:#FFFDE7;border:1.5px solid #FFD54F;color:#5D4000}
+.box-green{background:#E8F5E9;border:1.5px solid #A5D6A7;color:#1B5E20}
+.box-red{background:#FFEBEE;border:1.5px solid #FFCDD2;color:#B71C1C}
+.box-blue{background:#E3F2FD;border:1.5px solid #90CAF9;color:#0D47A1}
+
+/* Board */
+.board-stack{position:relative;width:100%;height:340px;margin-bottom:4px}
+.board-card{position:absolute;inset:0;background:#fff;border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.13);padding:24px 22px 18px;display:flex;flex-direction:column;touch-action:pan-y;cursor:grab;user-select:none;will-change:transform}
+.board-card:active{cursor:grabbing}
+.board-who{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.board-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.board-name{font-size:13px;font-weight:800}
+.board-time{font-size:11px;color:#BBB;margin-left:auto}
+.board-body{font-size:17px;font-weight:500;line-height:1.65;flex:1;overflow:hidden;word-break:break-word}
+.board-hint{display:flex;justify-content:space-between;margin-top:10px;font-size:11px;font-weight:700}
+.hint-left{color:#A0B4FF}.hint-right{color:#FF8AAE}
+.swipe-label{position:absolute;top:22px;padding:5px 14px;border-radius:20px;font-size:15px;font-weight:800;opacity:0;transition:opacity .1s;pointer-events:none;z-index:10}
+.swipe-label.keep{left:18px;background:#E8F0FF;color:#3B5BDB}
+.swipe-label.done{right:18px;background:#FFF0F5;color:#FF5E8A}
+.board-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;color:#CCC;font-size:14px;gap:8px}
+.board-empty-ico{font-size:48px}
+.board-count{display:flex;gap:6px;justify-content:center;margin-bottom:2px}
+.board-pip{width:7px;height:7px;border-radius:50%;background:#E0E0E0;transition:background .2s}
+.board-pip.on{background:#FF5E8A}
+.board-archived{margin-top:4px;width:100%}
+.arc-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #F2F2F2;opacity:.6}
+.arc-row:last-child{border-bottom:none}
+.board-post-card{background:#fff;border-radius:18px;padding:14px;margin-bottom:0;box-shadow:0 2px 12px rgba(0,0,0,.055);width:100%}
+
+/* Notification popup */
+.notif-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease}
+.notif-card{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:430px;padding-bottom:max(16px,env(safe-area-inset-bottom));animation:slideUp .25s cubic-bezier(.25,1.4,.5,1)}
+.notif-hdr{display:flex;align-items:center;gap:10px;padding:18px 16px 12px;border-bottom:1px solid #F0F0F0}
+.notif-close{color:#CCC;font-size:18px;padding:4px 8px;border-radius:8px}
+.notif-body{padding:12px 16px 0;max-height:55dvh;overflow-y:auto}
+.notif-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #F8F8F8}
+.notif-row:last-child{border-bottom:none}
+.notif-sub{padding:4px 0 4px 8px;opacity:.75}
+.notif-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;margin-top:1px}
+.notif-text{font-size:14px;line-height:1.5;font-weight:600}
+.notif-sub .notif-text{font-size:13px;font-weight:500;color:#666}
+
+/* Setup screen */
+.setup-bg{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100dvh;background:linear-gradient(160deg,#FFF5F8 0%,#F0EFFE 100%);padding:30px 20px 40px;overflow-y:auto}
+.setup-logo{font-size:56px;margin-bottom:10px;line-height:1}
+.setup-title{font-size:24px;font-weight:800;background:linear-gradient(135deg,#FF8050,#FF5E8A,#A855F7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.setup-sub{font-size:14px;color:#888;margin-bottom:24px;text-align:center;line-height:1.6}
+.step-tabs{display:flex;gap:6px;margin-bottom:20px;width:100%}
+.step-tab{flex:1;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s}
+.step-tab.on{border-color:#FF5E8A;background:#FFF0F5;color:#FF5E8A}
+.step-tab.off{border-color:#E5E5E5;background:#fff;color:#AAA}
+.step-num{display:inline-flex;width:20px;height:20px;border-radius:50%;background:#FF5E8A;color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;margin-right:4px}
+.step-content{width:100%}
+.step-card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:12px;width:100%}
+.err-msg{background:#FFEBEE;border:1.5px solid #FFCDD2;border-radius:10px;padding:10px 12px;font-size:13px;color:#B71C1C;margin-bottom:10px;line-height:1.6}
+.instruction-step{display:flex;gap:10px;margin-bottom:12px;align-items:flex-start}
+.instruction-num{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.instruction-text{font-size:13px;line-height:1.7;color:#333;flex:1}
+.instruction-text b{color:#FF5E8A}
+.link-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;margin-top:4px}
+
+.tk-chips{position:absolute;top:0;left:0;right:0;height:52px;display:flex;gap:6px;align-items:center;padding:0 10px;overflow-x:auto;background:#F4F1EE;z-index:3;scrollbar-width:none}
+.tk-chips::-webkit-scrollbar{display:none}
+.tk-chips .chip{flex:none;padding:8px 14px;font-size:13px}
+.tk-fab{position:absolute;right:14px;bottom:max(16px,env(safe-area-inset-bottom));z-index:3;height:52px;padding:0 22px;border-radius:26px;background:linear-gradient(135deg,#FF8050,#FF5E8A);color:#fff;font-size:16px;font-weight:800;box-shadow:0 6px 18px rgba(255,94,138,.4)}
+.tk-empty{position:absolute;inset:52px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.9;color:#B5ADA2;font-size:14px;font-weight:700;pointer-events:none;white-space:pre-line;z-index:2}
+.tk-back{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .18s ease}
+.tk-sheet{background:#fff;width:100%;max-width:430px;border-radius:24px 24px 0 0;padding:18px 16px max(16px,env(safe-area-inset-bottom));animation:slideUp .25s ease;max-height:90dvh;overflow-y:auto}
+.tk-lb{font-size:10px;font-weight:800;color:#AAA;letter-spacing:.8px;margin:12px 0 6px}
+.tk-row{display:flex;gap:6px;flex-wrap:wrap}
+.tk-act{display:flex;gap:8px;margin-top:16px}
+.tk-del{flex:1;padding:13px;border-radius:14px;border:2px solid #FFB3C6;color:#FF5E8A;font-weight:800;font-size:14px;background:#fff}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+
+
+
+
+
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { useState, useEffect, useRef, useCallback, createElement as h, Fragment } from 'https://esm.sh/react@18';
+import { createRoot } from 'https://esm.sh/react-dom@18/client';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const LS_CFG = 'wagaya_firebase_cfg_v1';
+const DB_PATH = 'wagaya/v1';
+const LIM = { text:100, note:200, amount:9999999, cats:30, items:300, events:500, budget:500, members:8 };
+
+const DEF_MEMBERS = [
+  {id:'m1',name:'パパ',emoji:'👨',color:'#4A90D9'},
+  {id:'m2',name:'ママ',emoji:'👩',color:'#E87CA0'},
+  {id:'m3',name:'子ども1',emoji:'🧒',color:'#F5A623'},
+  {id:'m4',name:'子ども2',emoji:'👦',color:'#5DAE5F'},
+];
+const DEF_CATS = [
+  {id:'sc1',name:'スーパー',color:'#4CAF50'},
+  {id:'sc2',name:'薬局',color:'#2196F3'},
+  {id:'sc3',name:'100均',color:'#FF9800'},
+  {id:'sc4',name:'ベビー用品',color:'#E91E8C'},
+  {id:'sc5',name:'ホームセンター',color:'#795548'},
+  {id:'sc6',name:'コンビニ',color:'#9C27B0'},
+  {id:'sc7',name:'その他',color:'#78909C'},
+];
+const BCATS = ['食費','家賃','電気代','ガス代','水道代','日用品','交通費','娯楽','医療','教育','その他'];
+const BCLR = {食費:'#FF6B6B',家賃:'#FF5E8A',電気代:'#F5A623',ガス代:'#4ECDC4',水道代:'#45B7D1',日用品:'#7BC67E',交通費:'#5C6BC0',娯楽:'#CE93D8',医療:'#F0A500',教育:'#AB47BC',その他:'#B0BEC5'};
+const PAL = ['#4CAF50','#2196F3','#FF9800','#E91E8C','#F44336','#795548','#9C27B0','#78909C','#009688','#FF5722','#3F51B5','#00BCD4','#8BC34A','#FFC107','#673AB7','#E91E63','#4A90D9','#F5A623','#5DAE5F','#FF7043'];
+const EMOJIS = ['👨','👩','🧒','👦','👧','🧑','👴','👵','👶','🐣'];
+
+// ── Security ──────────────────────────────────────────────────────────────────
+const clean = (s, max=LIM.text) => String(s??'').slice(0,max).trim();
+const cleanClr = c => /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#78909C';
+const cleanAmt = v => { const n=parseFloat(v); return Number.isFinite(n)&&n>=0&&n<=LIM.amount?n:0 };
+const cleanDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+const cleanTime = t => /^\d{2}:\d{2}$/.test(t) ? t : '';
+const uid = () => crypto.randomUUID();
+
+const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const vM = m => m&&typeof m.id==='string'&&typeof m.name==='string'&&m.name.length>0;
+const vE = e => e&&typeof e.id==='string'&&typeof e.title==='string';
+const vB = b => b&&typeof b.id==='string'&&typeof b.amount==='number'&&b.amount>=0;
+const vS = i => i&&typeof i.id==='string'&&typeof i.text==='string';
+const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
+const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
+const vN = n => n && typeof n.id==='string' && typeof n.text==='string' && n.text.length>0;
+const vT = t => t && typeof t.id==='string' && typeof t.t==='string' && typeof t.c==='string';
+
+// ── Config persistence ────────────────────────────────────────────────────────
+const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
+const saveCfg = cfg => { try { localStorage.setItem(LS_CFG,JSON.stringify(cfg)) } catch {} };
+const clearCfg = () => { try { localStorage.removeItem(LS_CFG) } catch {} };
+
+// ── App ───────────────────────────────────────────────────────────────────────
+let _db = null;
+
+function App() {
+  const [cfg, setCfg] = useState(loadCfg);
+  const [db,  setDb]  = useState(null);
+
+  useEffect(() => {
+    if (!cfg) { _db = null; setDb(null); return; }
+    try {
+      const app = initializeApp(cfg, `wagaya-${Date.now()}`);
+      _db = getDatabase(app);
+      setDb(_db);
+    } catch(e) {
+      console.error('Firebase init:', e);
+      setDb(null);
+    }
+  }, [cfg]);
+
+  const handleSave = useCallback(newCfg => { saveCfg(newCfg); setCfg(newCfg); }, []);
+  const handleReset = useCallback(() => { clearCfg(); _db=null; setCfg(null); setDb(null); }, []);
+
+  if (!cfg || !db) return h(SetupScreen, { onSave: handleSave });
+  return h(MainApp, { db, onReset: handleReset });
+}
+
+// ═══════════════════════ SETUP SCREEN ════════════════════════════════════════
+function SetupScreen({ onSave }) {
+  const [step,    setStep]    = useState('firebase'); // firebase | deploy | install
+  const [apiKey,  setApiKey]  = useState('');
+  const [projId,  setProjId]  = useState('');
+  const [dbUrl,   setDbUrl]   = useState('');
+  const [err,     setErr]     = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const tryConnect = async () => {
+    setErr(''); setLoading(true);
+    const k=clean(apiKey,250), p=clean(projId,100), u=clean(dbUrl,300);
+    if (!k||!p||!u) { setErr('3つすべて入力してください'); setLoading(false); return; }
+    if (!u.startsWith('https://')) { setErr('データベースURLは https:// で始まります'); setLoading(false); return; }
+    const cfg = {
+      apiKey: k,
+      authDomain: `${p}.firebaseapp.com`,
+      databaseURL: u,
+      projectId: p,
+      storageBucket: `${p}.appspot.com`,
+      messagingSenderId: '000000000000',
+      appId: '1:000000000000:web:000000',
+    };
+    try {
+      const app = initializeApp(cfg, `test-${Date.now()}`);
+      const testDb = getDatabase(app);
+      const testRef = ref(testDb, '_connectionTest');
+      await set(testRef, { ok: true, ts: Date.now() });
+      await remove(testRef);
+      onSave(cfg);
+    } catch(e) {
+      setErr('接続できませんでした。\n入力値を確認してください。\n\nエラー: ' + e.message);
+    }
+    setLoading(false);
+  };
+
+  const steps = [['firebase','① Firebase'],['deploy','② 公開'],['install','③ 追加']];
+
+  return h('div', { className:'setup-bg' },
+    h('div', { style:{fontSize:52,marginBottom:8} }, '🏠'),
+    h('div', { className:'setup-title' }, 'わが家の手帳'),
+    h('div', { className:'setup-sub' }, 'スマホだけで5分セットアップ\nログイン不要・全員リアルタイム同期'),
+
+    // Step tabs
+    h('div', { className:'step-tabs' },
+      steps.map(([k,label]) =>
+        h('button', { key:k, className:'step-tab '+(step===k?'on':'off'), onClick:()=>setStep(k) }, label)
+      )
+    ),
+
+    // ── STEP 1: Firebase ─────────────────────────────────────────────────────
+    step === 'firebase' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:12} }, '🔥 Firebase設定（無料）'),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '1'),
+          h('div', { className:'instruction-text' },
+            h('a', { href:'https://console.firebase.google.com/', target:'_blank', className:'link-btn' }, '🔗 Firebase Consoleを開く'),
+            h('br'), 'Googleアカウントでログインし、',h('b',null,'「プロジェクトを作成」'),'をタップ'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '2'),
+          h('div', { className:'instruction-text' },
+            'プロジェクト名（例: wagaya）を入力 → 作成',h('br'),
+            '完成画面で',h('b',null,'「続行」'),'をタップ'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '3'),
+          h('div', { className:'instruction-text' },
+            '左メニュー →',h('b',null,'「構築」→「Realtime Database」'),h('br'),
+            h('b',null,'「データベースを作成」'),'→ 場所は',h('b',null,'「asia-southeast1」'),'→ ',h('b',null,'「テストモード」'),'で開始'
+          )
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '4'),
+          h('div', { className:'instruction-text' },
+            '左メニュー →',h('b',null,'「プロジェクトの概要」⚙ → 「プロジェクトの設定」'),h('br'),
+            '下にスクロール →',h('b',null,'「マイアプリ」'),h('br'),
+            '「</>」(Web)アイコンをタップ → アプリ名を入力 → 登録',h('br'),
+            h('b',null,'firebaseConfig の中の3つの値をコピー'),'してください'
+          )
+        ),
+      ),
+
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:13,fontWeight:800,color:'#AAA',letterSpacing:'.5px',marginBottom:10} }, 'コピーした値を貼り付け'),
+        err && h('div', { className:'err-msg' }, err.split('\n').map((l,i)=>h('span',{key:i},l,h('br',null)))),
+        h('input', { className:'field field-mono', placeholder:'apiKey (例: AIzaSy...)', value:apiKey, onChange:e=>setApiKey(e.target.value) }),
+        h('input', { className:'field field-mono', placeholder:'projectId (例: wagaya-abc12)', value:projId, onChange:e=>setProjId(e.target.value) }),
+        h('input', { className:'field field-mono', placeholder:'databaseURL (例: https://wagaya-abc12-default-rtdb.asia-southeast1.firebasedatabase.app)', value:dbUrl, onChange:e=>setDbUrl(e.target.value) }),
+        h('button', { className:'btn btn-grad', onClick:tryConnect, disabled:loading },
+          loading ? h(Fragment,null,h('span',{className:'spinner'}),'接続確認中…') : '✅ 接続してアプリを開く'
+        ),
+      ),
+
+      h('div', { className:'box box-yellow' },
+        h('strong', null, '💡 費用・プライバシーについて'),
+        'Firebaseの無料枠（Spark）で十分です。月100万回の読み書きまで無料。家族5人が毎日使っても余裕があります。データはあなたのFirebaseアカウントにのみ保存されます。'
+      ),
+    ),
+
+    // ── STEP 2: Deploy ───────────────────────────────────────────────────────
+    step === 'deploy' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:12} }, '🌐 アプリを家族に公開する（無料）'),
+        h('div', { className:'box box-blue', style:{marginBottom:14} },
+          h('strong', null, 'この手順はPCがある場合のみ必要です'),
+          'スマホだけで使う場合、このHTMLファイルをブックマークして直接開けば各自のデータで使えます。',h('br'),
+          'Firebaseで同期する場合もURLを共有してください。'
+        ),
+
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '1'),
+          h('div', { className:'instruction-text' },
+            'PCでこのHTMLファイルを開き、「名前をつけて保存」で',h('b',null,'index.html'),'として保存'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '2'),
+          h('div', { className:'instruction-text' },
+            h('a', { href:'https://app.netlify.com/drop', target:'_blank', className:'link-btn' }, '🔗 Netlify Dropを開く'),h('br'),
+            'index.htmlをドラッグ＆ドロップ'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '3'),
+          h('div', { className:'instruction-text' },
+            '発行されたURL（例: sparkling-cat.netlify.app）を',h('br'),
+            h('b',null,'LINEの家族グループ'),'に送る'
+          )
+        ),
+        h('div', { className:'instruction-step' },
+          h('div', { className:'instruction-num' }, '4'),
+          h('div', { className:'instruction-text' },
+            '家族全員がURLを開き、①のFirebase設定を入力して完了'
+          )
+        ),
+      ),
+    ),
+
+    // ── STEP 3: Install ──────────────────────────────────────────────────────
+    step === 'install' && h('div', { className:'step-content' },
+      h('div', { className:'step-card' },
+        h('div', { style:{fontSize:15,fontWeight:800,marginBottom:14} }, '📲 ホーム画面に追加してアプリとして使う'),
+
+        isIOS
+          ? h(Fragment, null,
+              h('div', { className:'box box-blue', style:{marginBottom:12} }, h('strong',null,'iPhone / iPad の場合')),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'1'),
+                h('div',{className:'instruction-text'},'Safariでアプリのページを開く（ChromeはNG）')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'2'),
+                h('div',{className:'instruction-text'},'画面下の',h('b',null,'「共有」ボタン（□↑）'),'をタップ')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'3'),
+                h('div',{className:'instruction-text'},h('b',null,'「ホーム画面に追加」'),'をタップ → 追加')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'4'),
+                h('div',{className:'instruction-text'},'ホーム画面に「わが家の手帳」アイコンが現れます')
+              ),
+            )
+          : h(Fragment, null,
+              h('div', { className:'box box-green', style:{marginBottom:12} }, h('strong',null,'Android の場合')),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'1'),
+                h('div',{className:'instruction-text'},'Chromeでアプリのページを開く')
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'2'),
+                h('div',{className:'instruction-text'},'右上の',h('b',null,'「⋮」メニュー'),'→',h('b',null,'「ホーム画面に追加」'))
+              ),
+              h('div', { className:'instruction-step' },
+                h('div',{className:'instruction-num'},'3'),
+                h('div',{className:'instruction-text'},'「追加」をタップ → ホーム画面にアイコンが現れます')
+              ),
+            ),
+
+        h('div', { className:'box box-yellow', style:{marginTop:10} },
+          'ホーム画面から起動するとフルスクリーンで開き、アプリそのものとして使えます。'
+        ),
+      ),
+    ),
+  );
+}
+
+// ═══════════════════════ MAIN APP ════════════════════════════════════════════
+function MainApp({ db, onReset }) {
+  const [tab,      setTab]      = useState('shop');
+  const [synced,   setSynced]   = useState(false);
+  const [members,  setMembers]  = useState(DEF_MEMBERS);
+  const [events,   setEvents]   = useState([]);
+  const [budget,   setBudget]   = useState([]);
+  const [shopping, setShopping] = useState([]);
+  const [shopCats, setShopCats] = useState(DEF_CATS);
+  const [notes,    setNotes]    = useState([]);
+  const [tasks, setTasks] = useState([]);
+
+  // ── お知らせポップアップ ──────────────────────────────────────────────────
+  const [popup,       setPopup]       = useState(null);  // { items: [{icon,text}] }
+  const notifiedRef   = useRef(false);
+  const prevShopRef   = useRef(null);   // 前回の買い物リスト（localStorage）
+  const LS_SHOP_SNAP  = 'wagaya_shop_snap_v1';
+
+  // 初回同期完了時にポップアップ表示
+  useEffect(() => {
+    if (!synced || notifiedRef.current) return;
+    notifiedRef.current = true;
+
+    const todayStr = today();
+    const items = [];
+
+    // ① 今日の予定
+    const todayEvs = events.filter(e => e.date === todayStr)
+      .sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    if (todayEvs.length > 0) {
+      items.push({ icon:'📅', text:`今日の予定 ${todayEvs.length}件` });
+      todayEvs.forEach(e => {
+        const timeStr = e.allDay ? '終日' : (e.time || '');
+        items.push({ icon:'　', text: (timeStr ? timeStr+'　' : '') + e.title, sub:true });
+      });
+    }
+
+    // ② 未完了の買い物
+    const pending = shopping.filter(i => !i.done);
+    if (pending.length > 0) {
+      items.push({ icon:'🛒', text:`買い物リスト 残り${pending.length}件` });
+    }
+
+    // ③ 前回訪問から追加された買い物（他の家族が追加した可能性）
+    try {
+      const snapRaw = localStorage.getItem(LS_SHOP_SNAP);
+      if (snapRaw) {
+        const snap = JSON.parse(snapRaw);
+        const prevIds = new Set(snap);
+        const newItems = shopping.filter(i => !i.done && !prevIds.has(i.id));
+        if (newItems.length > 0) {
+          items.push({ icon:'✨', text:`前回から${newItems.length}件追加されました` });
+          newItems.slice(0,3).forEach(i => {
+            const m = members.find(x=>x.id===i.memberId);
+            items.push({ icon:'　', text: i.text + (m ? `（${m.emoji}${m.name}）` : ''), sub:true });
+          });
+          if (newItems.length > 3) items.push({ icon:'　', text:`…他${newItems.length-3}件`, sub:true });
+        }
+      }
+    } catch {}
+
+    // 買い物IDスナップショットを保存
+    try {
+      localStorage.setItem(LS_SHOP_SNAP, JSON.stringify(shopping.map(i=>i.id)));
+    } catch {}
+
+    // 掲示板の未読
+    const unread = tasks.filter(t => t.c !== 'done');
+    if (unread.length > 0) {
+      items.push({ icon:'📋', text:`カンバン 未完了タスク ${unread.length}件` });
+    }
+
+    if (items.length > 0) setPopup({ items });
+  }, [synced]);
+
+  // 買い物変化時にスナップ更新
+  useEffect(() => {
+    if (!synced) return;
+    try { localStorage.setItem(LS_SHOP_SNAP, JSON.stringify(shopping.map(i=>i.id))); } catch {}
+  }, [shopping]);
+
+  // Track writes to avoid echo
+  const writing = useRef({});
+  const loaded = useRef({});
+
+  // ── Firebase listeners ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!db) return;
+    const unsubs = [];
+    const listen = (path, setter, validator, def) => {
+      const r = ref(db, `${DB_PATH}/${path}`);
+      const u = onValue(r, snap => {
+        if (writing.current[path]) return; // skip echo of own write
+        loaded.current[path] = true;
+        const v = snap.val();
+        if (v === null) { setter(def); setSynced(true); return; }
+        const arr = safeArr(Object.values(v), validator);
+        setter(arr.length > 0 ? arr : def);
+        setSynced(true);
+      }, () => setSynced(false));
+      unsubs.push(u);
+    };
+    listen('members',  setMembers,  vM, DEF_MEMBERS);
+    listen('events',   setEvents,   vE, []);
+    listen('budget',   setBudget,   vB, []);
+    listen('shopping', setShopping, vS, []);
+    listen('shopCats', setShopCats, vC, DEF_CATS);
+    listen('notes',    setNotes,    vN, []);
+    listen('tasks', setTasks, vT, []);
+    return () => unsubs.forEach(u => u());
+  }, [db]);
+
+  // ── Write helper: flag to suppress echo, then write ───────────────────────
+  const writeDb = useCallback((path, arr) => {
+    if (!db) return;
+    writing.current[path] = true;
+    const obj = {};
+    arr.forEach(item => { obj[item.id] = item; });
+    set(ref(db, `${DB_PATH}/${path}`), Object.keys(obj).length ? obj : null)
+      .catch(() => {})
+      .finally(() => { setTimeout(() => { writing.current[path] = false; }, 3000); });
+  }, [db]);
+
+  // Sync to Firebase on every change
+  useEffect(() => { if (synced) writeDb('members',  members);  }, [members]);
+  useEffect(() => { if (synced) writeDb('events',   events);   }, [events]);
+  useEffect(() => { if (synced) writeDb('budget',   budget);   }, [budget]);
+  useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
+  useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
+  useEffect(() => { if (synced) writeDb('tasks', tasks); }, [tasks]);
+  // 旧・掲示板の未読メッセージを、一度だけ To Do に引き継ぐ
+  useEffect(() => {
+    if (!loaded.current.tasks || !loaded.current.notes) return;
+    try { if (localStorage.getItem('wagaya_board_migrated_v1')) return; localStorage.setItem('wagaya_board_migrated_v1','1'); } catch { return; }
+    const have = new Set(tasks.map(t => t.id));
+    const add = notes.filter(n => !n.archived && !have.has(n.id)).map(n => ({ id:n.id, t:clean(n.text,60), m:n.memberId, p:1, c:'todo', ts:n.ts||Date.now() }));
+    if (add.length) setTasks(p => [...p, ...add]);
+  }, [notes, tasks, synced]);
+
+  const TABS = [
+    { k:'menu',   label:'🍽 献立' },
+    { k:'shop',   label:'🛒 買い物' },
+    { k:'cal',    label:'📅 予定' },
+    { k:'budget', label:'💰 家計' },
+    { k:'board',  label:'📋 タスク' },
+    { k:'cfg',    label:'⚙️' },
+  ];
+
+  return h('div', { className:'shell' },
+
+    // ── Ambient orbs (3D depth background) ───────────────────────────────────
+
+    // ── お知らせポップアップ ────────────────────────────────────────────────
+    popup && h('div', { className:'notif-overlay', onClick:()=>setPopup(null) },
+      h('div', { className:'notif-card', onClick:e=>e.stopPropagation() },
+        h('div', { className:'notif-hdr' },
+          h('span', { style:{fontSize:22} }, '🏠'),
+          h('div', { style:{flex:1,fontWeight:800,fontSize:16,background:'linear-gradient(135deg,#fff,#C084FC)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'} }, 'わが家のお知らせ'),
+          h('button', { className:'notif-close', onClick:()=>setPopup(null) }, '✕'),
+        ),
+        h('div', { className:'notif-body' },
+          popup.items.map((item, i) =>
+            h('div', { key:i, className:'notif-row'+(item.sub?' notif-sub':'') },
+              h('span', { className:'notif-icon' }, item.icon),
+              h('span', { className:'notif-text' }, item.text),
+            )
+          )
+        ),
+        h('button', {
+          className:'btn btn-grad',
+          style:{margin:'12px 16px 0',width:'calc(100% - 32px)',boxShadow:'none'},
+          onClick:()=>setPopup(null),
+        }, 'OK'),
+      ),
+    ),
+    // Header
+    h('div', { className:'hdr' },
+      h('div', { className:'hdr-top' },
+        h('span', { style:{fontSize:26} }, '🏠'),
+        h('div', { className:'hdr-title' }, 'わが家の手帳'),
+        h('div', { className:'sync-pill' },
+          h('div', { className:'sync-dot', style:{background: synced ? '#4CAF50' : '#FF9800'} }),
+          synced ? '同期中' : '接続中…'
+        ),
+        h('div', { className:'hdr-members' },
+          members.map(m => h('span', { key:m.id, title:m.name }, m.emoji))
+        ),
+      ),
+      h('div', { className:'tabs' },
+        TABS.map(t => h('button', { key:t.k, className:'tab'+(tab===t.k?' on':''), onClick:()=>setTab(t.k) }, t.label))
+      ),
+    ),
+    // Content — with 3D perspective slide on tab change
+    h('div', { className:'content', key:tab,
+      style: tab==='board' ? { padding:0, overflow:'hidden', position:'relative' } : {}
+    },
+      tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
+      tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
+      tab==='cal'    && h(CalTab,    { events, setEvents, members }),
+      tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
+      tab==='board'  && h(TaskTab,  { tasks, setTasks, members }),
+      tab==='cfg'    && h(CfgTab,    { members, setMembers, onReset }),
+    ),
+  );
+}
+
+const RECIPES = [{"name":"肉じゃが","cat":"煮物","ings":[["じゃがいも",3,"個"],["牛肉",150,"g"],["玉ねぎ",1,"個"],["にんじん",1,"本"],["糸こんにゃく",1,"袋"]],"steps":["肉と野菜を一口大に切る","油で肉を炒め野菜を加える","だし・調味料を加えて中火で20分煮る"]},{"name":"唐揚げ","cat":"揚げ物","ings":[["鶏もも肉",400,"g"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"steps":["鶏肉を一口大に切り調味料で15分漬ける","片栗粉をまぶす","170℃の油で4分・180℃で1分揚げる"]},{"name":"麻婆豆腐","cat":"中華","ings":[["豆腐",1,"丁"],["豚ひき肉",100,"g"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"steps":["豆腐を2cm角に切り茹でる","ひき肉と調味料を炒める","スープと豆腐を加え水溶き片栗粉でとろみをつける"]},{"name":"カレーライス","cat":"カレー","ings":[["鶏もも肉",300,"g"],["じゃがいも",3,"個"],["にんじん",1,"本"],["玉ねぎ",2,"個"],["カレールー",4,"かけ"]],"steps":["野菜と肉を切る","油で炒め水を加えて15分煮る","火を止めルーを溶かし5分煮る"]},{"name":"豚の生姜焼き","cat":"炒め物","ings":[["豚ロース",300,"g"],["玉ねぎ",1,"個"],["しょうが",1,"かけ"]],"steps":["豚肉と調味料を混ぜ10分漬ける","玉ねぎを炒め豚肉を加える","強火で炒め合わせる"]},{"name":"ハンバーグ","cat":"洋食","ings":[["合いびき肉",300,"g"],["玉ねぎ",0.5,"個"],["卵",1,"個"]],"steps":["玉ねぎをみじん切りして炒め冷ます","全材料をよく混ぜて成形する","フライパンで両面焼きソースをかける"]},{"name":"親子丼","cat":"丼物","ings":[["鶏もも肉",200,"g"],["卵",3,"個"],["玉ねぎ",1,"個"]],"steps":["鶏肉と玉ねぎを切る","だしと調味料で鶏肉を煮る","卵でとじてご飯にのせる"]},{"name":"豚汁","cat":"汁物","ings":[["豚バラ肉",150,"g"],["大根",0.25,"本"],["にんじん",0.5,"本"],["ごぼう",0.5,"本"],["こんにゃく",0.5,"枚"]],"steps":["材料を切る","ごま油で豚肉と野菜を炒める","だしを加え煮えたら味噌を溶く"]},{"name":"野菜炒め","cat":"炒め物","ings":[["キャベツ",0.25,"個"],["もやし",1,"袋"],["にんじん",0.5,"本"],["豚バラ肉",150,"g"]],"steps":["野菜と肉を切る","強火で肉を炒め野菜を加える","調味料を加えてさっと炒める"]},{"name":"鮭のムニエル","cat":"魚料理","ings":[["鮭",2,"切れ"],["レモン",0.5,"個"]],"steps":["鮭に塩コショウして小麦粉をまぶす","バターで両面を焼く","レモンを絞りパセリをかける"]},{"name":"チャーハン","cat":"ご飯","ings":[["ご飯",2,"人分"],["卵",2,"個"],["チャーシュー",80,"g"],["長ねぎ",0.3,"本"]],"steps":["ご飯は冷やご飯を使う","強火で卵を炒めご飯を加える","具材と調味料を加えて炒める"]},{"name":"豚キムチ炒め","cat":"炒め物","ings":[["豚バラ肉",200,"g"],["キムチ",150,"g"],["豆腐",0.5,"丁"]],"steps":["豚肉を炒める","キムチを加えて炒める","豆腐を崩しながら加え調味する"]},{"name":"オムライス","cat":"洋食","ings":[["ご飯",2,"人分"],["鶏もも肉",100,"g"],["玉ねぎ",0.5,"個"],["卵",4,"個"]],"steps":["鶏肉と玉ねぎをバターで炒めケチャップライスを作る","卵を薄く焼く","ライスを包む"]},{"name":"筑前煮","cat":"煮物","ings":[["鶏もも肉",250,"g"],["れんこん",0.5,"節"],["ごぼう",0.5,"本"],["にんじん",1,"本"],["こんにゃく",0.5,"枚"],["干ししいたけ",4,"枚"]],"steps":["材料を乱切りにする","油で炒め調味料を加える","落し蓋をして20分煮る"]},{"name":"塩サバ焼き","cat":"魚料理","ings":[["塩サバ",2,"切れ"],["大根",5,"cm"],["レモン",0.5,"個"]],"steps":["グリルを予熱する","サバを皮目から7分焼く","大根おろしとレモンを添える"]},{"name":"餃子","cat":"中華","ings":[["餃子の皮",30,"枚"],["豚ひき肉",200,"g"],["キャベツ",0.25,"個"],["ニラ",0.5,"束"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"steps":["野菜をみじん切りにして塩でもむ","ひき肉と混ぜて皮で包む","フライパンで焼き水を加えて蒸し焼きにする"]},{"name":"肉豆腐","cat":"煮物","ings":[["牛肉",200,"g"],["豆腐",1,"丁"],["長ねぎ",1,"本"]],"steps":["豆腐を切る","だしと調味料を煮立てる","肉と豆腐・ねぎを加えて5分煮る"]},{"name":"鶏のトマト煮","cat":"洋食","ings":[["鶏もも肉",300,"g"],["トマト缶",1,"缶"],["玉ねぎ",1,"個"],["にんにく",1,"かけ"]],"steps":["鶏肉に塩コショウして焼く","玉ねぎとにんにくを炒める","トマト缶を加えて20分煮る"]},{"name":"茶碗蒸し","cat":"蒸し物","ings":[["卵",3,"個"],["鶏もも肉",80,"g"],["えび",4,"尾"],["しいたけ",2,"枚"]],"steps":["卵とだしを混ぜて漉す","具材を器に入れ卵液を注ぐ","蒸し器で15分蒸す"]},{"name":"豆腐ステーキ","cat":"ヘルシー","ings":[["木綿豆腐",1,"丁"],["にんにく",1,"かけ"],["長ねぎ",0.3,"本"]],"steps":["豆腐を厚切りにして水切りする","ごま油でこんがり焼く","調味料を合わせてかける"]},{"name":"アクアパッツァ","cat":"洋食","ings":[["白身魚",2,"切れ"],["あさり",200,"g"],["プチトマト",10,"個"],["にんにく",2,"かけ"]],"steps":["魚に塩コショウする","オリーブオイルとにんにくで魚を焼く","あさりとトマト・白ワインを加え蒸し焼きにする"]},{"name":"春巻き","cat":"中華","ings":[["春巻きの皮",10,"枚"],["豚ひき肉",150,"g"],["春雨",30,"g"],["キャベツ",0.25,"個"],["にんじん",0.5,"本"]],"steps":["具材を炒めて味付けし冷ます","春巻きの皮で包む","170℃の油で揚げる"]},{"name":"炊き込みご飯","cat":"ご飯","ings":[["米",2,"合"],["鶏もも肉",150,"g"],["にんじん",0.5,"本"],["ごぼう",0.3,"本"],["しいたけ",3,"枚"]],"steps":["米を洗い調味料を加える","具材を切って上にのせる","炊飯器で普通に炊く"]},{"name":"ビーフシチュー","cat":"洋食","ings":[["牛肉",300,"g"],["じゃがいも",2,"個"],["にんじん",1,"本"],["玉ねぎ",1,"個"],["ドミグラスソース缶",1,"缶"]],"steps":["牛肉と野菜を切る","肉を炒め赤ワインで煮る","ドミグラスソースを加えて30分煮込む"]},{"name":"豚ロースのソテー","cat":"洋食","ings":[["豚ロース",2,"枚"],["にんにく",1,"かけ"],["レモン",0.5,"個"]],"steps":["豚肉を常温に戻す","にんにくと共にフライパンで焼く","レモンを添えて盛り付ける"]},{"name":"麻婆なす","cat":"中華","ings":[["なす",3,"本"],["豚ひき肉",100,"g"],["にんにく",1,"かけ"],["しょうが",1,"かけ"],["長ねぎ",0.5,"本"]],"steps":["なすを乱切りにして素揚げする","ひき肉と調味料を炒める","なすと合わせてとろみをつける"]},{"name":"牛丼","cat":"丼物","ings":[["牛薄切り肉",300,"g"],["玉ねぎ",1,"個"],["紅しょうが",1,"袋"]],"steps":["玉ねぎを薄切りにする","牛肉と玉ねぎを調味料で煮る","ご飯にのせて紅しょうがを添える"]},{"name":"鶏肉の照り焼き","cat":"炒め物","ings":[["鶏もも肉",300,"g"],["にんにく",1,"かけ"]],"steps":["鶏肉に切り込みを入れる","フライパンで皮目から焼く","照り焼きタレをからめる"]},{"name":"さばの味噌煮","cat":"魚料理","ings":[["さば",2,"切れ"],["しょうが",1,"かけ"],["長ねぎ",0.5,"本"]],"steps":["さばに切り込みを入れ熱湯をかける","調味料としょうがで煮る","長ねぎを添える"]},{"name":"豆腐チゲ","cat":"汁物","ings":[["豆腐",1,"丁"],["豚バラ肉",150,"g"],["キムチ",200,"g"],["長ねぎ",1,"本"],["しいたけ",3,"枚"],["卵",2,"個"]],"steps":["豚肉とキムチを炒める","だしを加え野菜と豆腐を入れる","卵を落として蓋をする"]},{"name":"ぶりの照り焼き","cat":"魚料理","ings":[["ぶり",2,"切れ"],["大根",5,"cm"]],"steps":["ぶりに塩をして10分置く","フライパンで両面焼く","照り焼きタレをからめる"]},{"name":"エビチリ","cat":"中華","ings":[["えび",200,"g"],["長ねぎ",0.5,"本"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"steps":["えびの背わたを取る","にんにくとしょうがを炒める","えびとチリソースを合わせる"]},{"name":"回鍋肉","cat":"中華","ings":[["豚バラ肉",200,"g"],["キャベツ",0.25,"個"],["ピーマン",2,"個"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"steps":["豚肉を茹でて切る","野菜を切る","甜麺醤で炒め合わせる"]},{"name":"豚バラ大根","cat":"煮物","ings":[["豚バラ肉",200,"g"],["大根",0.5,"本"],["しょうが",1,"かけ"]],"steps":["大根を下茹でする","豚肉と大根を炒める","調味料で20分煮る"]},{"name":"ミネストローネ","cat":"洋食","ings":[["トマト缶",1,"缶"],["玉ねぎ",1,"個"],["にんじん",1,"本"],["じゃがいも",2,"個"],["ベーコン",3,"枚"],["キャベツ",0.25,"個"]],"steps":["野菜とベーコンを切る","オリーブオイルで炒める","トマト缶と水を加えて20分煮る"]},{"name":"きのこの炊き込みご飯","cat":"ご飯","ings":[["米",2,"合"],["しめじ",1,"袋"],["えのき",1,"袋"],["しいたけ",3,"枚"],["油揚げ",1,"枚"]],"steps":["きのこと油揚げを切る","米と調味料を混ぜる","炊飯器で炊く"]},{"name":"鶏肉のクリーム煮","cat":"洋食","ings":[["鶏もも肉",300,"g"],["玉ねぎ",1,"個"],["マッシュルーム",1,"袋"],["生クリーム",100,"ml"]],"steps":["鶏肉と野菜を切る","炒めてブイヨンで煮る","生クリームを加えて仕上げる"]},{"name":"豚カツ","cat":"揚げ物","ings":[["豚ロース",2,"枚"],["卵",1,"個"],["キャベツ",0.25,"個"]],"steps":["豚肉を叩いて塩コショウする","小麦粉・卵・パン粉の順につける","170℃の油で4分揚げる"]},{"name":"コロッケ","cat":"揚げ物","ings":[["じゃがいも",4,"個"],["合いびき肉",100,"g"],["玉ねぎ",0.5,"個"],["卵",1,"個"]],"steps":["じゃがいもを茹でてつぶす","ひき肉と玉ねぎを炒め混ぜる","成形してパン粉をつけて揚げる"]},{"name":"天ぷら","cat":"揚げ物","ings":[["えび",8,"尾"],["さつまいも",1,"本"],["なす",1,"本"],["ピーマン",2,"個"]],"steps":["具材を切る","衣を作る","170℃の油でさっと揚げる"]},{"name":"メンチカツ","cat":"揚げ物","ings":[["合いびき肉",300,"g"],["玉ねぎ",1,"個"],["卵",1,"個"]],"steps":["玉ねぎをみじん切りして炒める","ひき肉と混ぜて成形する","パン粉をつけて揚げる"]},{"name":"酢豚","cat":"中華","ings":[["豚肩ロース",300,"g"],["ピーマン",2,"個"],["玉ねぎ",1,"個"],["にんじん",0.5,"本"],["パイナップル缶",0.5,"缶"]],"steps":["豚肉を揚げる","野菜を炒める","甘酢あんと合わせる"]},{"name":"八宝菜","cat":"中華","ings":[["豚バラ肉",150,"g"],["えび",100,"g"],["白菜",0.25,"個"],["にんじん",0.5,"本"],["しいたけ",3,"枚"],["うずら卵",6,"個"]],"steps":["材料を切る","豚肉とえびを炒める","野菜を加えてとろみをつける"]},{"name":"チンジャオロース","cat":"中華","ings":[["牛肉",200,"g"],["ピーマン",4,"個"],["たけのこ",100,"g"],["にんにく",1,"かけ"]],"steps":["材料を細切りにする","牛肉を炒める","ピーマンとたけのこを加えて炒める"]},{"name":"エビマヨ","cat":"中華","ings":[["えび",200,"g"],["レタス",0.25,"個"],["マヨネーズ",3,"大さじ"]],"steps":["えびの背わたを取り片栗粉をまぶす","油で炒める","マヨネーズソースと和える"]},{"name":"棒棒鶏","cat":"中華","ings":[["鶏むね肉",2,"枚"],["きゅうり",1,"本"],["トマト",1,"個"],["長ねぎ",0.5,"本"]],"steps":["鶏肉を茹でて冷ます","手で細く裂く","ごまだれをかける"]},{"name":"中華丼","cat":"丼物","ings":[["豚バラ肉",150,"g"],["白菜",0.25,"個"],["にんじん",0.5,"本"],["しいたけ",3,"枚"],["うずら卵",6,"個"],["えび",100,"g"]],"steps":["具材を切る","豚肉を炒め野菜を加える","とろみをつけてご飯にかける"]},{"name":"天津飯","cat":"丼物","ings":[["卵",4,"個"],["かに缶",1,"缶"],["長ねぎ",0.3,"本"]],"steps":["卵とかにをほぐして混ぜる","フライパンで半熟に焼く","あんかけをかけてご飯にのせる"]},{"name":"カツ丼","cat":"丼物","ings":[["豚カツ",2,"枚"],["卵",4,"個"],["玉ねぎ",1,"個"]],"steps":["玉ねぎを煮る","豚カツを加えて卵でとじる","ご飯にのせる"]},{"name":"海鮮丼","cat":"丼物","ings":[["刺身盛り合わせ",1,"パック"],["きゅうり",1,"本"],["大葉",5,"枚"],["いくら",1,"瓶"]],"steps":["ご飯を酢飯にする","刺身を盛り付ける","いくらをのせる"]},{"name":"ねぎとろ丼","cat":"丼物","ings":[["まぐろ",200,"g"],["長ねぎ",1,"本"],["大葉",5,"枚"]],"steps":["まぐろを包丁で叩く","長ねぎをみじん切りにする","ご飯にのせる"]},{"name":"スパゲッティミートソース","cat":"洋食","ings":[["スパゲッティ",200,"g"],["合いびき肉",200,"g"],["玉ねぎ",1,"個"],["トマト缶",1,"缶"],["にんにく",1,"かけ"]],"steps":["玉ねぎとにんにくを炒める","ひき肉を加えて炒める","トマト缶で煮込む"]},{"name":"カルボナーラ","cat":"洋食","ings":[["スパゲッティ",200,"g"],["ベーコン",4,"枚"],["卵",3,"個"],["生クリーム",100,"ml"],["粉チーズ",4,"大さじ"]],"steps":["パスタを茹でる","ベーコンを炒める","卵と生クリームのソースと和える"]},{"name":"ペペロンチーノ","cat":"洋食","ings":[["スパゲッティ",200,"g"],["にんにく",3,"かけ"],["唐辛子",2,"本"],["アンチョビ",3,"枚"]],"steps":["パスタを茹でる","にんにくと唐辛子をオリーブオイルで炒める","パスタと和える"]},{"name":"グラタン","cat":"洋食","ings":[["鶏もも肉",200,"g"],["マカロニ",150,"g"],["玉ねぎ",1,"個"],["マッシュルーム",1,"袋"],["生クリーム",200,"ml"],["チーズ",100,"g"]],"steps":["ホワイトソースを作る","具材と合わせてグラタン皿に入れる","チーズをのせて焼く"]},{"name":"ピザ","cat":"洋食","ings":[["ピザ生地",1,"枚"],["トマトソース",3,"大さじ"],["モッツァレラチーズ",100,"g"],["ベーコン",3,"枚"],["ピーマン",1,"個"]],"steps":["生地にソースを塗る","具材をのせる","250℃で10分焼く"]},{"name":"ロールキャベツ","cat":"洋食","ings":[["キャベツ",0.5,"個"],["合いびき肉",300,"g"],["玉ねぎ",1,"個"],["卵",1,"個"],["トマト缶",1,"缶"]],"steps":["キャベツを茹でてほぐす","ひき肉を包む","トマトスープで煮込む"]},{"name":"チキンステーキ","cat":"洋食","ings":[["鶏もも肉",2,"枚"],["にんにく",2,"かけ"],["レモン",0.5,"個"]],"steps":["鶏肉を常温に戻す","皮目からフライパンで焼く","レモンを添える"]},{"name":"ポークチャップ","cat":"洋食","ings":[["豚ロース",2,"枚"],["玉ねぎ",1,"個"],["マッシュルーム",1,"袋"]],"steps":["豚肉を叩く","フライパンで焼く","ケチャップソースをかける"]},{"name":"チキンカレー","cat":"カレー","ings":[["鶏もも肉",400,"g"],["玉ねぎ",2,"個"],["じゃがいも",2,"個"],["にんじん",1,"本"],["カレールー",4,"かけ"]],"steps":["玉ねぎをあめ色に炒める","鶏肉と野菜を加えて煮る","ルーを溶かして煮込む"]},{"name":"キーマカレー","cat":"カレー","ings":[["合いびき肉",300,"g"],["玉ねぎ",2,"個"],["トマト",2,"個"],["にんにく",2,"かけ"],["しょうが",1,"かけ"],["カレールー",3,"かけ"]],"steps":["玉ねぎをみじん切りにして炒める","ひき肉を加えて炒める","トマトとルーで煮込む"]},{"name":"シーフードカレー","cat":"カレー","ings":[["えび",150,"g"],["いか",1,"杯"],["あさり",200,"g"],["玉ねぎ",1,"個"],["トマト缶",1,"缶"],["カレールー",3,"かけ"]],"steps":["玉ねぎを炒める","シーフードを加えて炒める","トマト缶とルーで煮込む"]},{"name":"すき焼き","cat":"鍋","ings":[["牛薄切り肉",400,"g"],["豆腐",1,"丁"],["長ねぎ",2,"本"],["春菊",1,"束"],["しらたき",1,"袋"],["しいたけ",4,"枚"],["卵",4,"個"]],"steps":["割り下を作る","牛肉を焼く","野菜と豆腐を加えて煮る"]},{"name":"しゃぶしゃぶ","cat":"鍋","ings":[["豚しゃぶ肉",400,"g"],["白菜",0.25,"個"],["長ねぎ",1,"本"],["しいたけ",4,"枚"],["えのき",1,"袋"],["豆腐",1,"丁"]],"steps":["出汁を沸かす","野菜を入れる","肉をさっとくぐらせる"]},{"name":"水炊き","cat":"鍋","ings":[["鶏もも肉",400,"g"],["白菜",0.25,"個"],["長ねぎ",1,"本"],["豆腐",1,"丁"],["しいたけ",4,"枚"],["春菊",1,"束"]],"steps":["鶏肉を下茹でする","出汁で野菜と鶏肉を煮る","ポン酢で食べる"]},{"name":"キムチ鍋","cat":"鍋","ings":[["豚バラ肉",300,"g"],["キムチ",300,"g"],["豆腐",1,"丁"],["長ねぎ",1,"本"],["もやし",1,"袋"],["えのき",1,"袋"]],"steps":["キムチを炒める","出汁を加えて煮立てる","具材を入れて煮る"]},{"name":"おでん","cat":"鍋","ings":[["大根",0.5,"本"],["卵",4,"個"],["こんにゃく",1,"枚"],["ちくわ",4,"本"],["さつま揚げ",4,"枚"],["じゃがいも",3,"個"]],"steps":["大根と卵を下茹でする","出汁を作る","具材を入れて弱火で1時間煮る"]},{"name":"豚の角煮","cat":"煮物","ings":[["豚バラ塊",500,"g"],["卵",4,"個"],["長ねぎ",1,"本"],["しょうが",2,"かけ"]],"steps":["豚肉を下茹でする","調味料で1時間煮込む","卵を加えてさらに煮る"]},{"name":"鶏の煮物","cat":"煮物","ings":[["鶏もも肉",400,"g"],["じゃがいも",3,"個"],["にんじん",1,"本"],["しいたけ",4,"枚"]],"steps":["材料を切る","鶏肉を炒める","調味料で20分煮る"]},{"name":"いわしの梅煮","cat":"魚料理","ings":[["いわし",6,"尾"],["梅干し",3,"個"],["しょうが",1,"かけ"],["長ねぎ",1,"本"]],"steps":["いわしを下処理する","梅干しとしょうがと煮る","長ねぎを添える"]},{"name":"かれいの煮付け","cat":"魚料理","ings":[["かれい",2,"切れ"],["しょうが",1,"かけ"],["長ねぎ",0.5,"本"]],"steps":["かれいに切り込みを入れる","煮汁を沸かす","落し蓋をして10分煮る"]},{"name":"鮭のホイル焼き","cat":"魚料理","ings":[["鮭",2,"切れ"],["玉ねぎ",1,"個"],["しめじ",1,"袋"],["バター",20,"g"],["レモン",0.5,"個"]],"steps":["野菜を切る","ホイルに鮭と野菜を包む","オーブンで20分焼く"]},{"name":"いか大根","cat":"煮物","ings":[["いか",1,"杯"],["大根",0.5,"本"],["しょうが",1,"かけ"]],"steps":["いかと大根を切る","大根を下茹でする","調味料で20分煮る"]},{"name":"ビビンバ","cat":"丼物","ings":[["牛ひき肉",200,"g"],["ほうれん草",1,"束"],["もやし",1,"袋"],["にんじん",0.5,"本"],["卵",4,"個"],["コチュジャン",2,"大さじ"]],"steps":["ナムルを作る","肉を炒める","ご飯にのせて混ぜる"]},{"name":"チャプチェ","cat":"韓国","ings":[["春雨",100,"g"],["牛肉",150,"g"],["ほうれん草",0.5,"束"],["にんじん",0.5,"本"],["玉ねぎ",0.5,"個"],["しいたけ",3,"枚"]],"steps":["春雨を戻す","具材を炒める","春雨と合わせて炒める"]},{"name":"タコライス","cat":"洋食","ings":[["合いびき肉",300,"g"],["玉ねぎ",1,"個"],["レタス",0.5,"個"],["トマト",2,"個"],["チーズ",50,"g"],["アボカド",1,"個"]],"steps":["ひき肉を炒めて味付けする","野菜を切る","ご飯の上に全部のせる"]},{"name":"ガパオライス","cat":"アジア","ings":[["鶏ひき肉",300,"g"],["バジル",1,"束"],["ピーマン",2,"個"],["赤パプリカ",1,"個"],["にんにく",2,"かけ"],["卵",4,"個"]],"steps":["にんにくと唐辛子を炒める","ひき肉と野菜を炒める","バジルを加えてご飯にのせる"]},{"name":"ルーローハン","cat":"アジア","ings":[["豚バラ塊",500,"g"],["卵",4,"個"],["長ねぎ",1,"本"],["しょうが",2,"かけ"],["にんにく",3,"かけ"]],"steps":["豚肉を角切りにして炒める","調味料で1時間煮込む","ご飯にかけて卵をのせる"]},{"name":"サムゲタン","cat":"韓国","ings":[["手羽元",8,"本"],["もち米",0.5,"合"],["にんにく",4,"かけ"],["なつめ",4,"個"],["長ねぎ",1,"本"]],"steps":["手羽元を下茹でする","もち米とにんにくと煮込む","長ねぎを添える"]},{"name":"麻辣湯","cat":"中華","ings":[["豚バラ肉",150,"g"],["豆腐",1,"丁"],["春雨",50,"g"],["白菜",0.25,"個"],["長ねぎ",1,"本"],["豆板醤",2,"大さじ"]],"steps":["豚肉を炒める","豆板醤を加えて炒める","スープと具材を加えて煮る"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["チャーシュー",8,"枚"],["メンマ",1,"袋"],["もやし",1,"袋"],["長ねぎ",1,"本"],["卵",4,"個"]],"name":"醤油ラーメン","steps":["卵を半熟に茹でて殻をむく","麺を茹でてスープを器に作る","麺を入れ具材をのせる"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["豚ひき肉",150,"g"],["もやし",1,"袋"],["コーン",1,"缶"],["バター",20,"g"],["長ねぎ",1,"本"]],"name":"味噌ラーメン","steps":["ひき肉ともやしを炒める","麺を茹でてスープを器に作る","具材とバターをのせる"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["鶏むね肉",1,"枚"],["もやし",1,"袋"],["わかめ",1,"袋"],["長ねぎ",1,"本"]],"name":"塩ラーメン","steps":["鶏むね肉を茹でて裂く","麺を茹でてスープを器に作る","具材をのせる"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["チャーシュー",8,"枚"],["きくらげ",1,"袋"],["紅しょうが",1,"袋"],["長ねぎ",1,"本"]],"name":"豚骨ラーメン","steps":["きくらげを戻して千切りにする","麺を固めに茹でてスープを器に作る","具材をのせる"]},{"cat":"麺類","ings":[["つけ麺用太麺",4,"玉"],["チャーシュー",8,"枚"],["メンマ",1,"袋"],["卵",4,"個"],["長ねぎ",1,"本"]],"name":"つけ麺","steps":["卵を半熟に茹でる","麺を茹でて冷水でしめる","熱いスープに具材を入れて添える"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["チャーシュー",8,"枚"],["メンマ",1,"袋"],["長ねぎ",1,"本"],["卵",4,"個"]],"name":"油そば","steps":["麺を茹でる","器にタレと油を入れ麺を和える","具材と卵黄をのせてよく混ぜる"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["豚ひき肉",200,"g"],["チンゲン菜",2,"株"],["長ねぎ",1,"本"],["練りごま",4,"大さじ"]],"name":"担々麺","steps":["ひき肉を調味料で炒める","麺を茹でてごまスープを器に作る","具材をのせる"]},{"cat":"麺類","ings":[["中華麺",4,"玉"],["卵",4,"個"],["ハム",4,"枚"],["きゅうり",2,"本"],["トマト",2,"個"],["紅しょうが",1,"袋"]],"name":"冷やし中華","steps":["卵を焼いて錦糸卵を作る","麺を茹でて冷水でしめる","具材をのせてタレをかける"]},{"cat":"麺類","ings":[["ちゃんぽん麺",4,"玉"],["豚バラ肉",150,"g"],["えび",100,"g"],["かまぼこ",1,"本"],["キャベツ",0.25,"個"],["もやし",1,"袋"],["にんじん",0.5,"本"]],"name":"ちゃんぽん","steps":["肉とえび・野菜を炒める","スープを加えて煮る","麺を加えてひと煮立ちさせる"]},{"cat":"麺類","ings":[["皿うどん麺",4,"袋"],["豚バラ肉",150,"g"],["白菜",0.25,"個"],["にんじん",0.5,"本"],["しいたけ",3,"枚"],["うずら卵",6,"個"]],"name":"皿うどん","steps":["肉と野菜を炒める","スープを加えてとろみをつける","麺の上にあんをかける"]},{"cat":"麺類","ings":[["焼きそば麺",4,"玉"],["豚バラ肉",200,"g"],["キャベツ",0.25,"個"],["もやし",1,"袋"],["にんじん",0.5,"本"],["紅しょうが",1,"袋"]],"name":"焼きそば","steps":["肉と野菜を炒める","麺をほぐして加える","ソースをからめて炒める"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["豚バラ肉",150,"g"],["キャベツ",0.25,"個"],["にんじん",0.5,"本"],["かつお節",1,"袋"]],"name":"焼うどん","steps":["肉と野菜を炒める","うどんを加えて炒める","調味料をからめかつお節をかける"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["豚バラ肉",150,"g"],["玉ねぎ",1,"個"],["長ねぎ",1,"本"],["カレールー",2,"かけ"],["油揚げ",2,"枚"]],"name":"カレーうどん","steps":["肉と玉ねぎを炒める","だしとルーを加えて煮る","うどんを加えてひと煮立ちさせる"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["ウインナー",6,"本"],["玉ねぎ",1,"個"],["ピーマン",2,"個"],["マッシュルーム",1,"袋"]],"name":"ナポリタン","steps":["パスタを茹でる","具材を炒める","ケチャップをからめて炒める"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["明太子",2,"腹"],["大葉",5,"枚"],["バター",20,"g"]],"name":"明太子パスタ","steps":["パスタを茹でる","明太子とバターを茹で汁で溶く","パスタを和えて大葉をのせる"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["しめじ",1,"袋"],["えのき",1,"袋"],["ベーコン",3,"枚"],["大葉",5,"枚"]],"name":"和風きのこパスタ","steps":["パスタを茹でる","ベーコンときのこを炒める","調味料とパスタを和える"]},{"cat":"煮物","ings":[["ぶり",4,"切れ"],["大根",0.5,"本"],["しょうが",1,"かけ"]],"name":"ブリ大根","steps":["大根を下茹でする","ぶりに熱湯をかける","調味料で25分煮る"]},{"cat":"煮物","ings":[["牛すじ",500,"g"],["こんにゃく",1,"枚"],["大根",0.25,"本"],["長ねぎ",1,"本"]],"name":"牛すじ煮込み","steps":["牛すじを2回茹でこぼす","野菜とこんにゃくを切る","調味料で1時間煮込む"]},{"cat":"煮物","ings":[["豚もつ",400,"g"],["大根",0.25,"本"],["にんじん",0.5,"本"],["こんにゃく",1,"枚"],["長ねぎ",1,"本"]],"name":"もつ煮","steps":["もつを下茹でして洗う","野菜とこんにゃくを切る","味噌仕立てで40分煮込む"]},{"cat":"煮物","ings":[["手羽元",10,"本"],["卵",4,"個"],["しょうが",1,"かけ"]],"name":"手羽元の甘辛煮","steps":["卵を茹でて殻をむく","手羽元を焼き色がつくまで焼く","調味料と卵を加えて25分煮る"]},{"cat":"煮物","ings":[["高野豆腐",4,"枚"],["にんじん",0.5,"本"],["しいたけ",3,"枚"],["絹さや",1,"袋"]],"name":"高野豆腐の煮物","steps":["高野豆腐を戻して切る","だしで野菜を煮る","高野豆腐を加えて含め煮にする"]},{"cat":"煮物","ings":[["厚揚げ",2,"枚"],["大根",0.25,"本"],["にんじん",0.5,"本"],["しいたけ",3,"枚"]],"name":"厚揚げと野菜の煮物","steps":["厚揚げに熱湯をかけて油抜きする","野菜を切る","だしと調味料で20分煮る"]},{"cat":"炒め物","ings":[["鶏ひき肉",400,"g"],["長ねぎ",1,"本"],["卵",1,"個"],["大葉",5,"枚"]],"name":"鶏つくね","steps":["材料をよく練って丸める","フライパンで両面焼く","甘辛タレをからめる"]},{"cat":"炒め物","ings":[["鶏もも肉",600,"g"],["長ねぎ",2,"本"]],"name":"焼き鳥","steps":["鶏肉とねぎを串に刺す","フライパンで焼き色をつける","タレをからめるか塩をふる"]},{"cat":"揚げ物","ings":[["手羽先",12,"本"],["白ごま",1,"袋"]],"name":"手羽先の甘辛揚げ","steps":["手羽先に片栗粉をまぶす","油でカリッと揚げる","甘辛タレとごまをからめる"]},{"cat":"揚げ物","ings":[["あじ",4,"尾"],["卵",1,"個"],["キャベツ",0.25,"個"]],"name":"アジフライ","steps":["あじを開いて塩コショウする","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"揚げ物","ings":[["えび",12,"尾"],["卵",1,"個"],["キャベツ",0.25,"個"],["レモン",0.5,"個"]],"name":"エビフライ","steps":["えびの背わたを取り筋を切る","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"揚げ物","ings":[["かき",300,"g"],["卵",1,"個"],["キャベツ",0.25,"個"]],"name":"カキフライ","steps":["かきを洗って水気をふく","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"魚料理","ings":[["さば",2,"切れ"],["しょうが",1,"かけ"],["キャベツ",0.25,"個"]],"name":"サバの竜田揚げ","steps":["さばを調味料に15分漬ける","片栗粉をまぶす","油でカリッと揚げる"]},{"cat":"魚料理","ings":[["さんま",4,"尾"],["大根",5,"cm"],["レモン",0.5,"個"]],"name":"さんまの塩焼き","steps":["さんまに塩をふって10分置く","グリルで両面焼く","大根おろしとレモンを添える"]},{"cat":"魚料理","ings":[["銀だら",2,"切れ"],["大葉",5,"枚"]],"name":"銀だらの西京焼き","steps":["味噌床に半日漬ける","味噌をふき取る","グリルで焦がさないよう焼く"]},{"cat":"魚料理","ings":[["鮭",2,"切れ"],["キャベツ",0.25,"個"],["玉ねぎ",1,"個"],["にんじん",0.5,"本"],["しめじ",1,"袋"],["バター",20,"g"]],"name":"鮭のちゃんちゃん焼き","steps":["野菜を切る","フライパンに鮭と野菜を入れる","味噌ダレとバターで蒸し焼きにする"]},{"cat":"魚料理","ings":[["ホッケ開き",2,"枚"],["大根",5,"cm"]],"name":"ホッケの開き焼き","steps":["グリルを予熱する","皮目から焼く","大根おろしを添える"]},{"cat":"魚料理","ings":[["金目鯛",2,"切れ"],["しょうが",1,"かけ"],["長ねぎ",0.5,"本"]],"name":"金目鯛の煮付け","steps":["魚に切り込みを入れる","煮汁を沸かす","落し蓋をして12分煮る"]},{"cat":"ヘルシー","ings":[["木綿豆腐",1,"丁"],["鶏ひき肉",200,"g"],["玉ねぎ",0.5,"個"],["大葉",5,"枚"]],"name":"豆腐ハンバーグ","steps":["豆腐を水切りする","材料を混ぜて成形する","フライパンで両面焼きタレをかける"]},{"cat":"ヘルシー","ings":[["鶏ささみ",6,"本"],["梅干し",3,"個"],["大葉",6,"枚"]],"name":"ささみの梅しそ焼き","steps":["ささみの筋を取り開く","梅肉と大葉をはさむ","フライパンで蒸し焼きにする"]},{"cat":"洋食","ings":[["牛薄切り肉",300,"g"],["玉ねぎ",2,"個"],["マッシュルーム",1,"袋"],["ハヤシルー",4,"かけ"]],"name":"ハヤシライス","steps":["玉ねぎと肉を炒める","水を加えて15分煮る","ルーを溶かして5分煮る"]},{"cat":"カレー","ings":[["牛肉",300,"g"],["じゃがいも",2,"個"],["にんじん",1,"本"],["玉ねぎ",2,"個"],["カレールー",4,"かけ"]],"name":"ビーフカレー","steps":["肉と野菜を炒める","水を加えて20分煮る","ルーを溶かして10分煮る"]},{"cat":"カレー","ings":[["合いびき肉",300,"g"],["玉ねぎ",1,"個"],["ピーマン",2,"個"],["レーズン",1,"袋"],["カレールー",2,"かけ"],["卵",4,"個"]],"name":"ドライカレー","steps":["玉ねぎとひき肉を炒める","ルーを刻んで加え炒める","ご飯にのせ目玉焼きを添える"]},{"cat":"カレー","ings":[["鶏もも肉",300,"g"],["じゃがいも",2,"個"],["にんじん",1,"本"],["ピーマン",2,"個"],["なす",2,"本"],["カレールー",3,"かけ"]],"name":"スープカレー","steps":["鶏肉と野菜を素揚げする","スープにルーを溶かす","具材を盛ってスープを注ぐ"]},{"cat":"洋食","ings":[["鶏もも肉",400,"g"],["卵",3,"個"],["玉ねぎ",0.5,"個"],["キャベツ",0.25,"個"]],"name":"チキン南蛮","steps":["鶏肉に卵液をからめて揚げる","甘酢にくぐらせる","タルタルソースをかける"]},{"cat":"揚げ物","ings":[["かに缶",1,"缶"],["玉ねぎ",1,"個"],["牛乳",200,"ml"],["卵",1,"個"]],"name":"カニクリームコロッケ","steps":["玉ねぎを炒めホワイトソースを作る","かにを混ぜて冷やし固める","成形してパン粉をつけて揚げる"]},{"cat":"洋食","ings":[["ご飯",2,"人分"],["鶏もも肉",150,"g"],["玉ねぎ",0.5,"個"],["マッシュルーム",1,"袋"],["チーズ",100,"g"],["生クリーム",100,"ml"]],"name":"ドリア","steps":["鶏肉と玉ねぎでピラフを作る","ホワイトソースをかける","チーズをのせて焼く"]},{"cat":"洋食","ings":[["ラザニア生地",1,"箱"],["合いびき肉",300,"g"],["トマト缶",1,"缶"],["玉ねぎ",1,"個"],["チーズ",100,"g"]],"name":"ラザニア","steps":["ミートソースを作る","ホワイトソースを作る","生地と重ねてオーブンで焼く"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["あさり",300,"g"],["にんにく",2,"かけ"],["唐辛子",1,"本"]],"name":"ボンゴレ","steps":["パスタを茹でる","あさりをワインで蒸す","パスタと和える"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["トマト缶",1,"缶"],["にんにく",2,"かけ"],["唐辛子",2,"本"],["ベーコン",3,"枚"]],"name":"アラビアータ","steps":["パスタを茹でる","にんにくと唐辛子を炒める","トマトソースで煮て和える"]},{"cat":"洋食","ings":[["スパゲッティ",300,"g"],["バジル",2,"束"],["粉チーズ",4,"大さじ"],["じゃがいも",1,"個"]],"name":"ジェノベーゼ","steps":["バジルソースを作る","パスタとじゃがいもを茹でる","ソースと和える"]},{"cat":"洋食","ings":[["牛ステーキ肉",2,"枚"],["にんにく",2,"かけ"],["バター",20,"g"]],"name":"ビーフステーキ","steps":["肉を常温に戻す","強火で両面焼く","休ませてから切る"]},{"cat":"洋食","ings":[["牛もも塊肉",500,"g"],["にんにく",1,"かけ"],["玉ねぎ",0.5,"個"]],"name":"ローストビーフ","steps":["肉に塩コショウして焼き色をつける","低温でじっくり火入れする","休ませて薄く切る"]},{"cat":"洋食","ings":[["ウインナー",6,"本"],["じゃがいも",3,"個"],["にんじん",1,"本"],["玉ねぎ",2,"個"],["キャベツ",0.25,"個"],["セロリ",1,"本"]],"name":"ポトフ","steps":["野菜を大きく切る","水から煮てあくを取る","コンソメで30分煮る"]},{"cat":"洋食","ings":[["あさり",300,"g"],["じゃがいも",2,"個"],["玉ねぎ",1,"個"],["ベーコン",3,"枚"],["牛乳",300,"ml"]],"name":"クラムチャウダー","steps":["ベーコンと玉ねぎを炒める","あさりを蒸して汁ごと加える","牛乳で煮る"]},{"cat":"洋食","ings":[["えび",200,"g"],["マッシュルーム",1,"袋"],["ブロッコリー",0.5,"個"],["にんにく",3,"かけ"],["バゲット",1,"本"]],"name":"アヒージョ","steps":["にんにくをオイルで熱する","具材を入れて煮る","バゲットを添える"]},{"cat":"洋食","ings":[["鶏むね肉",2,"枚"],["卵",2,"個"],["粉チーズ",3,"大さじ"]],"name":"鶏のピカタ","steps":["鶏肉を薄く開く","卵と粉チーズの衣をつける","フライパンで両面焼く"]},{"cat":"洋食","ings":[["鶏もも肉",300,"g"],["じゃがいも",2,"個"],["玉ねぎ",1,"個"],["にんじん",1,"本"],["シチュールー",4,"かけ"],["牛乳",200,"ml"]],"name":"クリームシチュー","steps":["肉と野菜を炒める","水を加えて15分煮る","ルーと牛乳を加えて煮る"]},{"cat":"洋食","ings":[["ご飯",2,"人分"],["鶏もも肉",200,"g"],["玉ねぎ",1,"個"],["ミックスベジタブル",1,"袋"]],"name":"チキンライス","steps":["鶏肉と玉ねぎを炒める","ご飯を加える","ケチャップをからめる"]},{"cat":"ご飯","ings":[["えび",150,"g"],["玉ねぎ",0.5,"個"],["ミックスベジタブル",1,"袋"],["ご飯",2,"人分"]],"name":"エビピラフ","steps":["米をバターで炒める","スープを加えて炊く","えびと野菜を混ぜる"]},{"cat":"炒め物","ings":[["豚レバー",300,"g"],["ニラ",1,"束"],["もやし",1,"袋"],["にんにく",1,"かけ"]],"name":"レバニラ炒め","steps":["レバーを下処理して片栗粉をまぶす","レバーを炒める","ニラともやしを加えて調味する"]},{"cat":"炒め物","ings":[["卵",4,"個"],["ニラ",1,"束"],["豚バラ肉",100,"g"]],"name":"ニラ玉","steps":["豚肉を炒める","ニラを加える","卵を流し入れて半熟で止める"]},{"cat":"炒め物","ings":[["トマト",3,"個"],["卵",4,"個"],["長ねぎ",0.3,"本"]],"name":"トマトと卵の炒め物","steps":["卵をふんわり炒めて取り出す","トマトを炒める","卵を戻して調味する"]},{"cat":"炒め物","ings":[["春雨",80,"g"],["豚ひき肉",150,"g"],["ニラ",0.5,"束"],["にんにく",1,"かけ"],["しょうが",1,"かけ"]],"name":"麻婆春雨","steps":["春雨を戻す","ひき肉と調味料を炒める","春雨とニラを加えて煮からめる"]},{"cat":"揚げ物","ings":[["鶏もも肉",2,"枚"],["長ねぎ",1,"本"],["レタス",0.25,"個"]],"name":"油淋鶏","steps":["鶏肉をカリッと揚げる","ねぎソースを作る","切ってソースをかける"]},{"cat":"中華","ings":[["鶏むね肉",2,"枚"],["きゅうり",1,"本"],["長ねぎ",0.5,"本"]],"name":"よだれ鶏","steps":["鶏肉をしっとり茹でる","ピリ辛ダレを作る","切ってタレをかける"]},{"cat":"中華","ings":[["卵",6,"個"],["かに缶",1,"缶"],["長ねぎ",0.3,"本"],["グリンピース",1,"袋"]],"name":"カニ玉","steps":["卵とかにを混ぜる","ふんわり焼く","甘酢あんをかける"]},{"cat":"蒸し物","ings":[["シュウマイの皮",30,"枚"],["豚ひき肉",300,"g"],["玉ねぎ",1,"個"],["しょうが",1,"かけ"]],"name":"シュウマイ","steps":["玉ねぎをみじん切りにして混ぜる","皮で包む","蒸し器で10分蒸す"]},{"cat":"炒め物","ings":[["鶏もも肉",300,"g"],["カシューナッツ",1,"袋"],["ピーマン",2,"個"],["玉ねぎ",1,"個"]],"name":"鶏肉のカシューナッツ炒め","steps":["鶏肉を揚げ焼きする","野菜を炒める","ナッツと合わせて調味する"]},{"cat":"炒め物","ings":[["えび",200,"g"],["ブロッコリー",1,"個"],["にんにく",1,"かけ"]],"name":"エビとブロッコリーの塩炒め","steps":["ブロッコリーを下茹でする","えびを炒める","塩味で調味する"]},{"cat":"韓国","ings":[["牛薄切り肉",400,"g"],["玉ねぎ",1,"個"],["にんじん",0.5,"本"],["ニラ",0.5,"束"],["しいたけ",3,"枚"]],"name":"プルコギ","steps":["肉をタレに漬ける","野菜を切る","汁気が飛ぶまで炒める"]},{"cat":"韓国","ings":[["豚バラ塊肉",400,"g"],["サンチュ",1,"袋"],["キムチ",200,"g"],["にんにく",2,"かけ"]],"name":"サムギョプサル","steps":["豚バラを厚切りにする","ホットプレートで焼く","サンチュで巻いて食べる"]},{"cat":"韓国","ings":[["豆腐",1,"丁"],["あさり",200,"g"],["豚バラ肉",100,"g"],["卵",2,"個"],["長ねぎ",1,"本"]],"name":"スンドゥブチゲ","steps":["あさりと豚肉を炒める","スープと豆腐を加えて煮る","卵を落とす"]},{"cat":"韓国","ings":[["トッポギ",1,"袋"],["さつま揚げ",2,"枚"],["キャベツ",0.25,"個"],["長ねぎ",1,"本"],["卵",2,"個"]],"name":"トッポギ","steps":["卵を茹でる","調味料と水を沸かす","トッポギと具材を煮る"]},{"cat":"韓国","ings":[["チヂミ粉",1,"袋"],["ニラ",1,"束"],["玉ねぎ",0.5,"個"],["にんじん",0.3,"本"],["えび",100,"g"]],"name":"チヂミ","steps":["生地に具材を混ぜる","多めの油でカリッと焼く","タレを添える"]},{"cat":"韓国","ings":[["鶏もも肉",400,"g"],["コチュジャン",2,"大さじ"]],"name":"ヤンニョムチキン","steps":["鶏肉を揚げる","甘辛ダレを作る","タレをからめる"]},{"cat":"韓国","ings":[["鶏もも肉",400,"g"],["キャベツ",0.25,"個"],["玉ねぎ",1,"個"],["さつまいも",1,"本"],["コチュジャン",3,"大さじ"],["チーズ",50,"g"]],"name":"タッカルビ","steps":["肉をタレに漬ける","野菜と炒める","チーズをのせて溶かす"]},{"cat":"韓国","ings":[["牛肉",200,"g"],["ぜんまい",1,"袋"],["もやし",1,"袋"],["長ねぎ",1,"本"],["卵",2,"個"]],"name":"ユッケジャン","steps":["牛肉を炒める","スープで野菜と煮る","卵を流し入れる"]},{"cat":"アジア","ings":[["鶏もも肉",300,"g"],["なす",3,"本"],["ピーマン",2,"個"],["グリーンカレーペースト",1,"袋"],["ココナッツミルク",1,"缶"]],"name":"グリーンカレー","steps":["ペーストを炒める","ココナッツミルクを加える","鶏肉と野菜を煮る"]},{"cat":"アジア","ings":[["えび",200,"g"],["マッシュルーム",1,"袋"],["トムヤムペースト",1,"袋"],["レモン",0.5,"個"]],"name":"トムヤムクン","steps":["えびの殻で出汁を取る","ペーストと具材を加える","レモンで仕上げる"]},{"cat":"アジア","ings":[["ご飯",2,"人分"],["鶏もも肉",150,"g"],["えび",100,"g"],["卵",4,"個"],["きゅうり",1,"本"]],"name":"ナシゴレン","steps":["鶏肉とえびを炒める","ご飯を加える","甘辛く味付けし目玉焼きをのせる"]},{"cat":"アジア","ings":[["米",2,"合"],["鶏もも肉",2,"枚"],["きゅうり",1,"本"],["パクチー",1,"束"]],"name":"カオマンガイ","steps":["鶏肉を茹でる","茹で汁でご飯を炊く","切ってタレを添える"]},{"cat":"麺類","ings":[["ライスヌードル",1,"袋"],["えび",150,"g"],["卵",2,"個"],["もやし",1,"袋"],["ニラ",0.5,"束"],["ピーナッツ",1,"袋"]],"name":"パッタイ","steps":["麺を戻す","えびと卵を炒める","麺と調味料をからめる"]},{"cat":"麺類","ings":[["ライスヌードル",1,"袋"],["鶏むね肉",1,"枚"],["もやし",1,"袋"],["パクチー",1,"束"],["レモン",0.5,"個"]],"name":"フォー","steps":["鶏肉を茹でてスープを作る","麺を茹でる","具材とハーブをのせる"]},{"cat":"丼物","ings":[["豚バラ肉",300,"g"],["玉ねぎ",1,"個"],["紅しょうが",1,"袋"]],"name":"豚丼","steps":["玉ねぎを薄切りにする","豚肉を甘辛く焼く","ご飯にのせる"]},{"cat":"丼物","ings":[["えび",4,"尾"],["さつまいも",0.5,"本"],["なす",1,"本"],["ピーマン",2,"個"],["大葉",4,"枚"]],"name":"天丼","steps":["具材に衣をつける","170℃の油で揚げる","タレをかけてご飯にのせる"]},{"cat":"丼物","ings":[["うなぎ蒲焼き",2,"尾"],["大葉",4,"枚"]],"name":"うな丼","steps":["うなぎを温め直す","ご飯にタレをかける","うなぎをのせる"]},{"cat":"丼物","ings":[["まぐろ",200,"g"],["大葉",5,"枚"],["白ごま",1,"袋"],["卵",2,"個"]],"name":"マグロの漬け丼","steps":["まぐろをタレに15分漬ける","ご飯にのせる","卵黄と大葉を添える"]},{"cat":"丼物","ings":[["合いびき肉",300,"g"],["玉ねぎ",0.5,"個"],["卵",4,"個"],["レタス",0.25,"個"],["トマト",1,"個"]],"name":"ロコモコ丼","steps":["ハンバーグを焼く","グレイビーソースを作る","ご飯にのせ目玉焼きを添える"]},{"cat":"丼物","ings":[["鶏ひき肉",300,"g"],["卵",4,"個"],["絹さや",1,"袋"]],"name":"そぼろ丼","steps":["鶏そぼろを作る","炒り卵を作る","ご飯にのせる"]},{"cat":"ご飯","ings":[["ご飯",2,"人分"],["牛薄切り肉",300,"g"],["コーン",1,"缶"],["長ねぎ",1,"本"],["バター",20,"g"]],"name":"ペッパーライス","steps":["ご飯の周りに肉を並べる","コーンとバターをのせる","混ぜながら焼く"]},{"cat":"丼物","ings":[["サーモン刺身",200,"g"],["アボカド",1,"個"],["大葉",4,"枚"]],"name":"サーモンアボカド丼","steps":["サーモンとアボカドを切る","タレに和える","ご飯にのせる"]},{"cat":"ご飯","ings":[["米",2,"合"],["刺身盛り合わせ",1,"パック"],["卵",2,"個"],["れんこん",0.3,"節"],["絹さや",1,"袋"]],"name":"ちらし寿司","steps":["酢飯を作る","具材を下ごしらえする","盛り付ける"]},{"cat":"ご飯","ings":[["お好み焼き粉",1,"袋"],["キャベツ",0.5,"個"],["豚バラ肉",200,"g"],["卵",2,"個"],["紅しょうが",1,"袋"]],"name":"お好み焼き","steps":["生地に具材を混ぜる","フライパンで両面焼く","ソースとマヨネーズをかける"]},{"cat":"丼物","ings":[["しらす",100,"g"],["大葉",5,"枚"],["卵",2,"個"],["大根",5,"cm"]],"name":"しらす丼","steps":["卵をふんわり焼く","ご飯にしらすをのせる","大葉と大根おろしを添える"]},{"cat":"ご飯","ings":[["ご飯",2,"人分"],["キムチ",200,"g"],["豚バラ肉",150,"g"],["卵",4,"個"],["チーズ",50,"g"]],"name":"キムチチャーハン","steps":["豚肉とキムチを炒める","ご飯を加えて炒める","チーズと目玉焼きをのせる"]},{"cat":"丼物","ings":[["豚バラ肉",200,"g"],["キムチ",150,"g"],["豆腐",0.5,"丁"],["卵",2,"個"]],"name":"豚キムチ丼","steps":["豚肉を炒める","キムチと豆腐を加える","ご飯にのせ温泉卵を添える"]},{"cat":"鍋","ings":[["鶏もも肉",300,"g"],["たら",2,"切れ"],["えび",4,"尾"],["白菜",0.25,"個"],["長ねぎ",1,"本"],["豆腐",1,"丁"],["しいたけ",4,"枚"]],"name":"寄せ鍋","steps":["出汁を沸かす","具材を切る","火の通りにくい順に入れる"]},{"cat":"鍋","ings":[["牛もつ",400,"g"],["キャベツ",0.5,"個"],["ニラ",1,"束"],["にんにく",2,"かけ"],["唐辛子",1,"本"]],"name":"もつ鍋","steps":["もつを下茹でする","スープを沸かす","野菜ともつを煮る"]},{"cat":"鍋","ings":[["豚バラ肉",400,"g"],["白菜",0.5,"個"],["しょうが",1,"かけ"]],"name":"ミルフィーユ鍋","steps":["白菜と豚肉を重ねて切る","鍋に詰める","だしを加えて煮る"]},{"cat":"鍋","ings":[["豚バラ肉",300,"g"],["白菜",0.25,"個"],["豆腐",1,"丁"],["豆乳",500,"ml"],["長ねぎ",1,"本"]],"name":"豆乳鍋","steps":["出汁を沸かす","具材を煮る","豆乳を加えて温める"]},{"cat":"鍋","ings":[["鶏もも肉",300,"g"],["トマト缶",1,"缶"],["キャベツ",0.25,"個"],["玉ねぎ",1,"個"],["ウインナー",4,"本"],["チーズ",50,"g"]],"name":"トマト鍋","steps":["トマトスープを作る","具材を煮る","チーズをのせて溶かす"]},{"cat":"鍋","ings":[["鶏ひき肉",300,"g"],["白菜",0.25,"個"],["長ねぎ",1,"本"],["豆腐",1,"丁"],["しいたけ",4,"枚"],["にんじん",0.5,"本"]],"name":"ちゃんこ鍋","steps":["鶏つみれを作る","出汁を沸かす","具材を煮る"]},{"cat":"中華","ings":[["餃子の皮",30,"枚"],["豚ひき肉",200,"g"],["白菜",0.25,"個"],["ニラ",0.5,"束"],["しょうが",1,"かけ"]],"name":"水餃子","steps":["具材を混ぜて皮で包む","たっぷりの湯で茹でる","浮いてきたら差し水をして茹で上げる"]},{"cat":"揚げ物","ings":[["鶏もも肉",400,"g"],["しょうが",1,"かけ"],["キャベツ",0.25,"個"]],"name":"鶏の竜田揚げ","steps":["鶏肉を調味料に20分漬ける","片栗粉をまぶす","油でカリッと揚げる"]},{"cat":"炒め物","ings":[["豚ロース",2,"枚"],["キャベツ",0.25,"個"]],"name":"豚の味噌漬け焼き","steps":["味噌床に半日漬ける","味噌をふき取る","フライパンで焦がさないよう焼く"]},{"cat":"揚げ物","ings":[["ハム",4,"枚"],["チーズ",4,"枚"],["卵",1,"個"]],"name":"ハムカツ","steps":["ハムでチーズをはさむ","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"揚げ物","ings":[["鶏むね肉",2,"枚"],["卵",1,"個"],["キャベツ",0.25,"個"]],"name":"チキンカツ","steps":["鶏肉を開いて塩コショウする","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"揚げ物","ings":[["豚ロース",300,"g"],["玉ねぎ",1,"個"],["うずら卵",6,"個"],["卵",1,"個"]],"name":"串カツ","steps":["具材を串に刺す","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"炒め物","ings":[["豚ロース",2,"枚"],["にんにく",2,"かけ"],["キャベツ",0.25,"個"]],"name":"とんてき","steps":["豚肉に切り込みを入れる","にんにくと焼く","濃いめのタレをからめる"]},{"cat":"炒め物","ings":[["ラム肉",400,"g"],["玉ねぎ",2,"個"],["ピーマン",2,"個"],["もやし",1,"袋"]],"name":"ジンギスカン","steps":["野菜を切る","ホットプレートで肉を焼く","野菜と炒めてタレで食べる"]},{"cat":"炒め物","ings":[["豚ホルモン",400,"g"],["キャベツ",0.25,"個"],["ニラ",0.5,"束"],["にんにく",2,"かけ"]],"name":"ホルモン炒め","steps":["ホルモンを下茹でする","強火で炒める","味噌ダレをからめる"]},{"cat":"洋食","ings":[["豚肩ロース塊",600,"g"],["にんにく",2,"かけ"],["じゃがいも",3,"個"]],"name":"ローストポーク","steps":["肉に塩とハーブをすり込む","オーブンでじっくり焼く","休ませて切る"]},{"cat":"炒め物","ings":[["牛薄切り肉",400,"g"],["豚バラ肉",300,"g"],["玉ねぎ",2,"個"],["ピーマン",3,"個"],["キャベツ",0.25,"個"]],"name":"焼肉","steps":["野菜を切る","ホットプレートで肉を焼く","野菜も焼いてタレで食べる"]},{"cat":"揚げ物","ings":[["豚ロース",2,"枚"],["えび",4,"尾"],["玉ねぎ",0.5,"個"],["卵",1,"個"],["キャベツ",0.25,"個"]],"name":"ミックスフライ","steps":["具材に塩コショウする","小麦粉・卵・パン粉の順につける","170℃の油で揚げる"]},{"cat":"韓国","ings":[["ご飯",2,"人分"],["牛肉",150,"g"],["卵",2,"個"],["長ねぎ",1,"本"],["キムチ",100,"g"]],"name":"クッパ","steps":["牛肉とスープを煮る","ご飯を加える","卵を流し入れる"]},{"cat":"麺類","ings":[["冷麺",4,"玉"],["牛薄切り肉",150,"g"],["きゅうり",1,"本"],["キムチ",100,"g"],["卵",2,"個"]],"name":"冷麺","steps":["麺を茹でて冷水でしめる","スープを冷やす","具材をのせる"]},{"cat":"麺類","ings":[["そうめん",4,"束"],["卵",2,"個"],["ハム",4,"枚"],["きゅうり",1,"本"]],"name":"そうめん","steps":["卵を焼いて錦糸卵を作る","そうめんを茹でて冷水でしめる","具材とめんつゆを添える"]},{"cat":"麺類","ings":[["ほうとう麺",4,"玉"],["かぼちゃ",0.25,"個"],["豚バラ肉",150,"g"],["白菜",0.25,"個"],["にんじん",0.5,"本"],["しいたけ",3,"枚"]],"name":"ほうとう","steps":["野菜を切る","だしで野菜と麺を煮る","味噌を溶く"]},{"cat":"麺類","ings":[["太うどん",4,"玉"],["鶏もも肉",200,"g"],["卵",4,"個"],["玉ねぎ",1,"個"],["長ねぎ",1,"本"]],"name":"味噌煮込みうどん","steps":["味噌仕立ての出汁を作る","うどんと具材を煮る","卵を落として蓋をする"]},{"cat":"麺類","ings":[["生ラーメン麺",4,"玉"],["豚ひき肉",200,"g"],["もやし",1,"袋"],["ニラ",0.5,"束"],["にんにく",2,"かけ"]],"name":"台湾ラーメン","steps":["ひき肉を辛く炒める","麺を茹でてスープを器に作る","肉そぼろとニラをのせる"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["卵",4,"個"],["長ねぎ",1,"本"],["かつお節",1,"袋"]],"name":"釜玉うどん","steps":["うどんを茹でる","熱いうちに卵をからめる","ねぎとかつお節をのせる"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["牛薄切り肉",200,"g"],["玉ねぎ",0.5,"個"],["長ねぎ",1,"本"]],"name":"肉うどん","steps":["牛肉を甘辛く煮る","うどんを茹でる","だしを注いで肉をのせる"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["油揚げ",4,"枚"],["長ねぎ",1,"本"],["わかめ",1,"袋"]],"name":"きつねうどん","steps":["油揚げを甘辛く煮る","うどんを茹でる","だしを注いで具材をのせる"]},{"cat":"麺類","ings":[["そば",4,"玉"],["長芋",0.5,"本"],["卵",2,"個"],["大葉",4,"枚"]],"name":"とろろそば","steps":["長芋をすりおろす","そばを茹でる","つゆを注いでとろろをのせる"]},{"cat":"麺類","ings":[["うどん",4,"玉"],["鶏もも肉",200,"g"],["卵",4,"個"],["かまぼこ",1,"本"],["しいたけ",4,"枚"],["ほうれん草",1,"束"]],"name":"鍋焼きうどん","steps":["土鍋にだしと具材を入れる","うどんを加えて煮る","卵を落として蓋をする"]},{"cat":"汁物","ings":[["大根",0.25,"本"],["里芋",4,"個"],["にんじん",0.5,"本"],["ごぼう",0.5,"本"],["こんにゃく",0.5,"枚"],["油揚げ",2,"枚"],["鶏もも肉",150,"g"]],"name":"けんちん汁","steps":["材料を切る","油で炒める","だしを加えて煮て調味する"]},{"cat":"汁物","ings":[["里芋",6,"個"],["牛肉",200,"g"],["こんにゃく",0.5,"枚"],["しめじ",1,"袋"],["長ねぎ",1,"本"]],"name":"芋煮","steps":["里芋の皮をむく","だしで具材を煮る","醤油仕立てで調味する"]}];
+const RMETA = {"肉じゃが": {"t": 35, "g": ["ガッツリ", "子ども"]}, "唐揚げ": {"t": 30, "g": ["ガッツリ", "子ども"]}, "麻婆豆腐": {"t": 20, "g": ["辛い", "節約"]}, "カレーライス": {"t": 40, "g": ["ガッツリ", "子ども"]}, "豚の生姜焼き": {"t": 20, "g": ["ガッツリ"]}, "ハンバーグ": {"t": 35, "g": ["ガッツリ", "子ども"]}, "親子丼": {"t": 20, "g": ["子ども"]}, "豚汁": {"t": 30, "g": []}, "野菜炒め": {"t": 15, "g": ["節約", "さっぱり"]}, "鮭のムニエル": {"t": 20, "g": ["さっぱり"]}, "チャーハン": {"t": 15, "g": ["節約", "子ども"]}, "豚キムチ炒め": {"t": 15, "g": ["辛い", "ガッツリ"]}, "オムライス": {"t": 30, "g": ["子ども"]}, "筑前煮": {"t": 40, "g": []}, "塩サバ焼き": {"t": 15, "g": ["さっぱり", "節約"]}, "餃子": {"t": 50, "g": ["ガッツリ", "子ども"]}, "肉豆腐": {"t": 20, "g": ["節約"]}, "鶏のトマト煮": {"t": 30, "g": ["さっぱり"]}, "茶碗蒸し": {"t": 25, "g": ["さっぱり"]}, "豆腐ステーキ": {"t": 15, "g": ["さっぱり", "節約"]}, "アクアパッツァ": {"t": 25, "g": ["さっぱり"]}, "春巻き": {"t": 40, "g": ["ガッツリ", "子ども"]}, "炊き込みご飯": {"t": 55, "g": []}, "ビーフシチュー": {"t": 50, "g": ["ガッツリ"]}, "豚ロースのソテー": {"t": 20, "g": ["ガッツリ"]}, "麻婆なす": {"t": 25, "g": ["辛い"]}, "牛丼": {"t": 20, "g": ["ガッツリ", "子ども"]}, "鶏肉の照り焼き": {"t": 20, "g": ["子ども"]}, "さばの味噌煮": {"t": 25, "g": ["さっぱり"]}, "豆腐チゲ": {"t": 20, "g": ["辛い"]}, "ぶりの照り焼き": {"t": 20, "g": []}, "エビチリ": {"t": 25, "g": ["辛い"]}, "回鍋肉": {"t": 25, "g": ["ガッツリ"]}, "豚バラ大根": {"t": 35, "g": []}, "ミネストローネ": {"t": 35, "g": ["さっぱり", "子ども"]}, "きのこの炊き込みご飯": {"t": 55, "g": ["さっぱり"]}, "鶏肉のクリーム煮": {"t": 30, "g": ["子ども"]}, "豚カツ": {"t": 30, "g": ["ガッツリ"]}, "コロッケ": {"t": 50, "g": ["ガッツリ", "子ども"]}, "天ぷら": {"t": 30, "g": []}, "メンチカツ": {"t": 40, "g": ["ガッツリ"]}, "酢豚": {"t": 35, "g": []}, "八宝菜": {"t": 25, "g": []}, "チンジャオロース": {"t": 20, "g": ["ガッツリ"]}, "エビマヨ": {"t": 20, "g": ["子ども"]}, "棒棒鶏": {"t": 25, "g": ["さっぱり"]}, "中華丼": {"t": 25, "g": ["子ども"]}, "天津飯": {"t": 20, "g": ["子ども"]}, "カツ丼": {"t": 25, "g": ["ガッツリ"]}, "海鮮丼": {"t": 15, "g": ["さっぱり"]}, "ねぎとろ丼": {"t": 15, "g": ["さっぱり"]}, "スパゲッティミートソース": {"t": 30, "g": ["子ども", "ガッツリ"]}, "カルボナーラ": {"t": 20, "g": ["ガッツリ", "子ども"]}, "ペペロンチーノ": {"t": 15, "g": ["辛い", "節約"]}, "グラタン": {"t": 40, "g": ["子ども"]}, "ピザ": {"t": 20, "g": ["子ども"]}, "ロールキャベツ": {"t": 50, "g": []}, "チキンステーキ": {"t": 25, "g": ["ガッツリ"]}, "ポークチャップ": {"t": 25, "g": []}, "チキンカレー": {"t": 45, "g": ["ガッツリ", "子ども"]}, "キーマカレー": {"t": 35, "g": ["ガッツリ"]}, "シーフードカレー": {"t": 35, "g": []}, "すき焼き": {"t": 30, "g": ["ガッツリ"]}, "しゃぶしゃぶ": {"t": 25, "g": ["さっぱり"]}, "水炊き": {"t": 35, "g": ["さっぱり"]}, "キムチ鍋": {"t": 25, "g": ["辛い"]}, "おでん": {"t": 70, "g": []}, "豚の角煮": {"t": 80, "g": ["ガッツリ"]}, "鶏の煮物": {"t": 30, "g": []}, "いわしの梅煮": {"t": 25, "g": ["さっぱり", "節約"]}, "かれいの煮付け": {"t": 20, "g": ["さっぱり"]}, "鮭のホイル焼き": {"t": 30, "g": ["さっぱり", "子ども"]}, "いか大根": {"t": 35, "g": []}, "ビビンバ": {"t": 30, "g": ["辛い"]}, "チャプチェ": {"t": 30, "g": []}, "タコライス": {"t": 25, "g": ["子ども"]}, "ガパオライス": {"t": 20, "g": ["辛い"]}, "ルーローハン": {"t": 70, "g": ["ガッツリ"]}, "サムゲタン": {"t": 60, "g": ["さっぱり"]}, "麻辣湯": {"t": 25, "g": ["辛い"]}, "醤油ラーメン": {"t": 20, "g": ["子ども"]}, "味噌ラーメン": {"t": 20, "g": ["子ども", "ガッツリ"]}, "塩ラーメン": {"t": 20, "g": ["さっぱり"]}, "豚骨ラーメン": {"t": 20, "g": ["ガッツリ"]}, "つけ麺": {"t": 25, "g": ["ガッツリ"]}, "油そば": {"t": 15, "g": ["ガッツリ"]}, "担々麺": {"t": 20, "g": ["辛い"]}, "冷やし中華": {"t": 20, "g": ["さっぱり", "子ども"]}, "ちゃんぽん": {"t": 25, "g": ["子ども"]}, "皿うどん": {"t": 25, "g": ["子ども"]}, "焼きそば": {"t": 15, "g": ["子ども", "節約"]}, "焼うどん": {"t": 15, "g": ["子ども", "節約"]}, "カレーうどん": {"t": 20, "g": ["子ども"]}, "ナポリタン": {"t": 20, "g": ["子ども"]}, "明太子パスタ": {"t": 15, "g": []}, "和風きのこパスタ": {"t": 20, "g": ["さっぱり"]}, "ブリ大根": {"t": 40, "g": ["さっぱり"]}, "牛すじ煮込み": {"t": 90, "g": ["ガッツリ"]}, "もつ煮": {"t": 60, "g": ["ガッツリ"]}, "手羽元の甘辛煮": {"t": 40, "g": ["子ども"]}, "高野豆腐の煮物": {"t": 30, "g": ["さっぱり", "節約"]}, "厚揚げと野菜の煮物": {"t": 25, "g": ["節約", "さっぱり"]}, "鶏つくね": {"t": 25, "g": ["子ども"]}, "焼き鳥": {"t": 25, "g": ["ガッツリ", "子ども"]}, "手羽先の甘辛揚げ": {"t": 25, "g": ["ガッツリ", "子ども"]}, "アジフライ": {"t": 30, "g": ["子ども"]}, "エビフライ": {"t": 30, "g": ["子ども"]}, "カキフライ": {"t": 25, "g": []}, "サバの竜田揚げ": {"t": 20, "g": []}, "さんまの塩焼き": {"t": 20, "g": ["さっぱり", "節約"]}, "銀だらの西京焼き": {"t": 20, "g": ["さっぱり"]}, "鮭のちゃんちゃん焼き": {"t": 25, "g": ["子ども"]}, "ホッケの開き焼き": {"t": 15, "g": ["さっぱり", "節約"]}, "金目鯛の煮付け": {"t": 20, "g": ["さっぱり"]}, "豆腐ハンバーグ": {"t": 25, "g": ["子ども", "さっぱり"]}, "ささみの梅しそ焼き": {"t": 15, "g": ["さっぱり", "節約"]}, "ハヤシライス": {"t": 35, "g": ["子ども"]}, "ビーフカレー": {"t": 45, "g": ["ガッツリ", "子ども"]}, "ドライカレー": {"t": 20, "g": ["子ども"]}, "スープカレー": {"t": 40, "g": ["辛い"]}, "チキン南蛮": {"t": 30, "g": ["ガッツリ", "子ども"]}, "カニクリームコロッケ": {"t": 45, "g": ["子ども"]}, "ドリア": {"t": 30, "g": ["子ども"]}, "ラザニア": {"t": 50, "g": ["子ども"]}, "ボンゴレ": {"t": 20, "g": ["さっぱり"]}, "アラビアータ": {"t": 20, "g": ["辛い"]}, "ジェノベーゼ": {"t": 20, "g": ["さっぱり"]}, "ビーフステーキ": {"t": 20, "g": ["ガッツリ"]}, "ローストビーフ": {"t": 60, "g": ["ガッツリ"]}, "ポトフ": {"t": 40, "g": ["さっぱり", "子ども"]}, "クラムチャウダー": {"t": 30, "g": ["子ども"]}, "アヒージョ": {"t": 20, "g": ["さっぱり"]}, "鶏のピカタ": {"t": 20, "g": ["節約"]}, "クリームシチュー": {"t": 35, "g": ["子ども"]}, "チキンライス": {"t": 20, "g": ["子ども"]}, "エビピラフ": {"t": 20, "g": ["子ども"]}, "レバニラ炒め": {"t": 20, "g": ["ガッツリ", "節約"]}, "ニラ玉": {"t": 10, "g": ["節約", "子ども"]}, "トマトと卵の炒め物": {"t": 10, "g": ["さっぱり", "子ども"]}, "麻婆春雨": {"t": 20, "g": ["辛い", "節約"]}, "油淋鶏": {"t": 30, "g": ["ガッツリ", "子ども"]}, "よだれ鶏": {"t": 25, "g": ["辛い", "さっぱり"]}, "カニ玉": {"t": 15, "g": ["子ども"]}, "シュウマイ": {"t": 30, "g": ["子ども"]}, "鶏肉のカシューナッツ炒め": {"t": 20, "g": ["子ども"]}, "エビとブロッコリーの塩炒め": {"t": 15, "g": ["さっぱり"]}, "プルコギ": {"t": 20, "g": ["ガッツリ", "子ども"]}, "サムギョプサル": {"t": 25, "g": ["ガッツリ"]}, "スンドゥブチゲ": {"t": 20, "g": ["辛い"]}, "トッポギ": {"t": 20, "g": ["辛い"]}, "チヂミ": {"t": 20, "g": ["子ども"]}, "ヤンニョムチキン": {"t": 25, "g": ["辛い", "子ども"]}, "タッカルビ": {"t": 25, "g": ["辛い", "ガッツリ"]}, "ユッケジャン": {"t": 40, "g": ["辛い"]}, "グリーンカレー": {"t": 25, "g": ["辛い"]}, "トムヤムクン": {"t": 20, "g": ["辛い", "さっぱり"]}, "ナシゴレン": {"t": 20, "g": ["辛い"]}, "カオマンガイ": {"t": 55, "g": []}, "パッタイ": {"t": 20, "g": []}, "フォー": {"t": 20, "g": ["さっぱり"]}, "豚丼": {"t": 15, "g": ["ガッツリ", "子ども"]}, "天丼": {"t": 30, "g": []}, "うな丼": {"t": 10, "g": ["ガッツリ"]}, "マグロの漬け丼": {"t": 15, "g": ["さっぱり"]}, "ロコモコ丼": {"t": 25, "g": ["子ども"]}, "そぼろ丼": {"t": 15, "g": ["子ども", "節約"]}, "ペッパーライス": {"t": 15, "g": ["ガッツリ", "子ども"]}, "サーモンアボカド丼": {"t": 10, "g": ["さっぱり"]}, "ちらし寿司": {"t": 30, "g": ["子ども"]}, "お好み焼き": {"t": 25, "g": ["子ども", "ガッツリ"]}, "しらす丼": {"t": 10, "g": ["さっぱり", "節約"]}, "キムチチャーハン": {"t": 15, "g": ["辛い"]}, "豚キムチ丼": {"t": 15, "g": ["辛い", "ガッツリ"]}, "寄せ鍋": {"t": 30, "g": ["さっぱり"]}, "もつ鍋": {"t": 30, "g": ["ガッツリ"]}, "ミルフィーユ鍋": {"t": 25, "g": ["子ども"]}, "豆乳鍋": {"t": 25, "g": ["さっぱり", "子ども"]}, "トマト鍋": {"t": 30, "g": ["子ども"]}, "ちゃんこ鍋": {"t": 35, "g": ["子ども"]}, "水餃子": {"t": 25, "g": ["子ども"]}, "鶏の竜田揚げ": {"t": 25, "g": ["ガッツリ", "子ども"]}, "豚の味噌漬け焼き": {"t": 20, "g": ["ガッツリ"]}, "ハムカツ": {"t": 20, "g": ["子ども", "節約"]}, "チキンカツ": {"t": 25, "g": ["ガッツリ", "子ども"]}, "串カツ": {"t": 40, "g": ["ガッツリ"]}, "とんてき": {"t": 20, "g": ["ガッツリ"]}, "ジンギスカン": {"t": 20, "g": ["ガッツリ"]}, "ホルモン炒め": {"t": 20, "g": ["ガッツリ"]}, "ローストポーク": {"t": 50, "g": ["ガッツリ"]}, "焼肉": {"t": 20, "g": ["ガッツリ", "子ども"]}, "ミックスフライ": {"t": 35, "g": ["子ども"]}, "クッパ": {"t": 25, "g": ["辛い"]}, "冷麺": {"t": 15, "g": ["さっぱり", "辛い"]}, "そうめん": {"t": 10, "g": ["さっぱり"]}, "ほうとう": {"t": 35, "g": ["子ども"]}, "味噌煮込みうどん": {"t": 25, "g": []}, "台湾ラーメン": {"t": 20, "g": ["辛い", "ガッツリ"]}, "釜玉うどん": {"t": 10, "g": ["子ども", "節約"]}, "肉うどん": {"t": 15, "g": ["子ども"]}, "きつねうどん": {"t": 15, "g": ["さっぱり", "子ども"]}, "とろろそば": {"t": 15, "g": ["さっぱり"]}, "鍋焼きうどん": {"t": 20, "g": ["子ども"]}, "けんちん汁": {"t": 35, "g": ["さっぱり"]}, "芋煮": {"t": 40, "g": ["さっぱり"]}};
+
+// ═══════════════════════ MENU SUGGEST ═══════════════════════════════════════
+const CAT_COLORS = {煮物:'#FF8C42',揚げ物:'#E84393',中華:'#C0392B',カレー:'#F39C12',炒め物:'#27AE60',洋食:'#2980B9',丼物:'#8E44AD',汁物:'#16A085',魚料理:'#1ABC9C',ご飯:'#D35400',副菜:'#7F8C8D',蒸し物:'#2C3E50',ヘルシー:'#27AE60',鍋:'#A93226',韓国:'#C2185B',アジア:'#00838F',麺類:'#B9770E'};
+
+function fmtAmt(base, servings, baseServings) {
+  const v = base * (servings / baseServings);
+  if (v === 0) return '少々';
+  if (Number.isInteger(v)) return String(v);
+  // Round to 1 decimal
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : String(r);
+}
+
+function MenuTab({ shopping, setShopping, shopCats, members }) {
+  const [mood,      setMood]      = useState('all');
+  const [cands,     setCands]     = useState(null);
+  const [recipe,    setRecipe]    = useState(null);
+  const [servings,  setServings]  = useState(4);
+  const [baseServ,  setBaseServ]  = useState(4);
+  const [added,     setAdded]     = useState(false);
+  const [decided,   setDecided]   = useState([]);
+  const [showSteps, setShowSteps] = useState(false);
+  const [rolling,   setRolling]   = useState(false);
+  const [dispName,  setDispName]  = useState('');
+  const timerRef = useRef(null);
+
+  const R2 = RECIPES.map(r => {
+    const m = RMETA[r.name] || {};
+    return { ...r, t: m.t || 30, tags: m.g || [] };
+  });
+
+  const MOODS = [
+    { k:'all',    label:'🎲 おまかせ' },
+    { k:'quick',  label:'⏱ 時短' },
+    { k:'hearty', label:'🍖 ガッツリ' },
+    { k:'light',  label:'🥗 さっぱり' },
+    { k:'cheap',  label:'💰 節約' },
+    { k:'kids',   label:'👶 子どもウケ' },
+    { k:'nabe',   label:'🍲 鍋' },
+    { k:'spicy',  label:'🌶 辛い' },
+  ];
+
+  const inMood = (r, k) =>
+    k === 'quick'  ? r.t <= 20 :
+    k === 'nabe'   ? r.cat === '鍋' :
+    k === 'hearty' ? r.tags.includes('ガッツリ') :
+    k === 'light'  ? r.tags.includes('さっぱり') :
+    k === 'cheap'  ? r.tags.includes('節約') :
+    k === 'kids'   ? r.tags.includes('子ども') :
+    k === 'spicy'  ? r.tags.includes('辛い') : true;
+
+  const points = r => {
+    const p = [];
+    if (r.t <= 15) p.push('⏱ ' + r.t + '分で完成');
+    else if (r.t <= 25) p.push('⏱ 約' + r.t + '分');
+    if (r.tags.includes('子ども')) p.push('👶 子どもウケ◎');
+    if (r.tags.includes('ガッツリ')) p.push('🍖 ガッツリ満足');
+    if (r.tags.includes('さっぱり')) p.push('🥗 さっぱり');
+    if (r.tags.includes('節約')) p.push('💰 お財布にやさしい');
+    if (r.tags.includes('辛い')) p.push('🌶 ピリ辛');
+    if (r.cat === '鍋') p.push('🍲 みんなで囲める');
+    return p.slice(0, 2);
+  };
+
+  const draw = () => {
+    if (rolling) return;
+    let pool = R2.filter(r => inMood(r, mood) && !decided.slice(-3).includes(r.name));
+    if (pool.length < 3) pool = R2.filter(r => inMood(r, mood));
+    if (pool.length < 3) pool = R2.slice();
+    const prev = cands ? cands.map(c => c.name) : [];
+    const fresh = pool.filter(r => !prev.includes(r.name));
+    if (fresh.length >= 3) pool = fresh;
+    const arr = pool.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    const picked = arr.slice(0, 3);
+
+    setRolling(true);
+    setRecipe(null);
+    setCands(null);
+    setAdded(false);
+    setShowSteps(false);
+    let count = 0;
+    const spin = () => {
+      const rnd = R2[Math.floor(Math.random() * R2.length)];
+      setDispName(rnd.name);
+      count++;
+      const delay = count < 5 ? 70 : count < 8 ? 130 : 220;
+      if (count < 10) {
+        timerRef.current = setTimeout(spin, delay);
+      } else {
+        setCands(picked);
+        setRolling(false);
+      }
+    };
+    timerRef.current = setTimeout(spin, 70);
+  };
+
+  const choose = r => {
+    setRecipe(r);
+    setBaseServ(4);
+    setServings(4);
+    setAdded(false);
+    setShowSteps(false);
+  };
+
+  const changeMood = k => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setRolling(false);
+    setMood(k);
+    setCands(null);
+    setRecipe(null);
+    setAdded(false);
+    setShowSteps(false);
+  };
+
+  const addToShop = () => {
+    if (!recipe) return;
+    const defaultCat = (shopCats.find(c => c.name === 'スーパー') ?? shopCats[0])?.id ?? '';
+    const defaultMem = members[0]?.id ?? '';
+    const newItems = recipe.ings.map(([name, baseAmt, unit]) => {
+      const amt = unit === '人分' ? servings + '人分'
+        : unit === '適量' ? ''
+        : fmtAmt(baseAmt, servings, baseServ) + unit;
+      return {
+        id: uid(), text: amt ? name + ' ' + amt : name,
+        memberId: defaultMem, catId: defaultCat, done: false,
+      };
+    });
+    setShopping(p => {
+      const existing = new Set(p.map(i => i.text));
+      return [...p, ...newItems.filter(i => !existing.has(i.text))];
+    });
+    setDecided(d => [...d.slice(-9), recipe.name]);
+    setAdded(true);
+  };
+
+  const colBase = recipe ? (CAT_COLORS[recipe.cat] ?? '#FF5E8A') : '#FF5E8A';
+
+  return h(Fragment, null,
+
+    // ── ヘッダー ──────────────────────────────────────────────────────────────
+    h('div', { style:{textAlign:'center',marginBottom:12} },
+      h('div', { style:{fontSize:36,marginBottom:4} }, '🎰'),
+      h('div', { style:{fontSize:18,fontWeight:800,color:'#333'} }, '今日のラッキーメニュー'),
+      h('div', { style:{fontSize:12,color:'#AAA',marginTop:2} }, '気分を選んで、3つの候補から決めよう！'),
+    ),
+
+    // ── 気分チップ ────────────────────────────────────────────────────────────
+    h('div', { style:{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12,justifyContent:'center'} },
+      MOODS.map(m => h('button', {
+        key: m.k,
+        onClick: () => changeMood(m.k),
+        style: {
+          padding:'6px 12px', borderRadius:20, fontSize:12.5, fontWeight:800,
+          border: mood === m.k ? '2px solid #FF5E8A' : '2px solid #E8E8E8',
+          background: mood === m.k ? 'linear-gradient(135deg,#FF8050,#FF5E8A)' : '#fff',
+          color: mood === m.k ? '#fff' : '#777',
+        },
+      }, m.label))
+    ),
+
+    // ── 表示エリア ────────────────────────────────────────────────────────────
+    h('div', { style:{
+      background: rolling ? 'linear-gradient(135deg,#FF8050,#FF5E8A)' : recipe ? `linear-gradient(135deg,${colBase}CC,${colBase})` : '#F5F5F5',
+      borderRadius:24, padding:'24px 16px', textAlign:'center', marginBottom:12,
+      minHeight:100, display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+      transition:'background .3s',
+      boxShadow: rolling || recipe ? '0 6px 24px rgba(255,94,138,.25)' : 'none',
+    }},
+      rolling
+        ? h(Fragment, null,
+            h('div', { style:{fontSize:13,color:'rgba(255,255,255,.8)',fontWeight:700,marginBottom:8} }, '🎲 抽選中…'),
+            h('div', { key:dispName, style:{
+              fontSize:26,fontWeight:800,color:'#fff',
+              animation:'rouletteTick .15s cubic-bezier(.25,1.4,.5,1)',
+              letterSpacing:1,display:'inline-block',
+            }}, dispName),
+          )
+        : recipe
+          ? h(Fragment, null,
+              h('div', { style:{fontSize:12,color:'rgba(255,255,255,.85)',fontWeight:700,marginBottom:6} }, '🎉 今日のメニューは…'),
+              h('div', { style:{fontSize:28,fontWeight:800,color:'#fff',marginBottom:4} }, recipe.name),
+              h('div', { style:{display:'flex',gap:6,justifyContent:'center'} },
+                h('span', { style:{
+                  display:'inline-block',padding:'3px 12px',borderRadius:20,
+                  background:'rgba(255,255,255,.25)',color:'#fff',fontSize:12,fontWeight:800,
+                }}, recipe.cat),
+                h('span', { style:{
+                  display:'inline-block',padding:'3px 12px',borderRadius:20,
+                  background:'rgba(255,255,255,.25)',color:'#fff',fontSize:12,fontWeight:800,
+                }}, '⏱ 約' + recipe.t + '分'),
+              ),
+            )
+          : cands
+            ? h('div', { style:{color:'#888',fontSize:15,fontWeight:800} }, '✨ 今日の候補はこの3つ！')
+            : h('div', { style:{color:'#CCC',fontSize:14,fontWeight:700} }, 'ボタンを押してスタート！'),
+    ),
+
+    // ── 抽選ボタン ────────────────────────────────────────────────────────────
+    h('button', {
+      className: 'btn btn-grad',
+      style: { marginBottom:12, fontSize:16, boxShadow:'0 4px 18px rgba(255,94,138,.32)',
+        opacity: rolling ? 0.7 : 1 },
+      onClick: draw,
+      disabled: rolling,
+    }, rolling ? '🎲 抽選中…' : (cands || recipe) ? '🔀 引き直す' : '🎰 候補を出す！'),
+
+    // ── 候補カード（3択） ─────────────────────────────────────────────────────
+    cands && !recipe && !rolling && h('div', { className:'fi' },
+      cands.map((r, i) => {
+        const cc = CAT_COLORS[r.cat] ?? '#FF5E8A';
+        return h('div', {
+          key: r.name,
+          className: 'card',
+          onClick: () => choose(r),
+          style: {
+            borderLeft: '6px solid ' + cc, cursor: 'pointer',
+            padding: '13px 14px', marginBottom: 10,
+          },
+        },
+          h('div', { style:{display:'flex',alignItems:'baseline',gap:8,marginBottom:5} },
+            h('span', { style:{fontSize:17,fontWeight:800,color:'#333'} }, r.name),
+            h('span', { style:{fontSize:11,color:'#AAA',fontWeight:700} }, r.cat),
+          ),
+          h('div', { style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:6} },
+            points(r).map((p, j) => h('span', { key:j, style:{
+              display:'inline-block',padding:'2px 9px',borderRadius:20,
+              background: cc + '1A', color: cc, fontSize:11, fontWeight:800,
+            }}, p))
+          ),
+          h('div', { style:{fontSize:12,color:'#999'} },
+            '主な材料：' + r.ings.slice(0, 3).map(g => g[0]).join('・')),
+          h('div', { style:{fontSize:11.5,color:cc,fontWeight:800,marginTop:5} }, 'タップで決定 →'),
+        );
+      })
+    ),
+
+    // ── 戻るボタン ────────────────────────────────────────────────────────────
+    recipe && !rolling && cands && h('button', {
+      className: 'btn btn-ghost', style: { marginBottom: 10, fontSize: 13 },
+      onClick: () => { setRecipe(null); setAdded(false); },
+    }, '← 候補に戻る'),
+
+    // ── レシピカード ──────────────────────────────────────────────────────────
+    recipe && !rolling && h('div', { className:'card fi', style:{borderTop:`4px solid ${colBase}`} },
+
+      // 人数
+      h('div', { className:'card', style:{background:'#FAFAFA',padding:'12px 14px',marginBottom:12} },
+        h('div', { style:{display:'flex',alignItems:'center',gap:12} },
+          h('span', { style:{fontSize:13,fontWeight:800,color:'#888'} }, '👨‍👩‍👧‍👦 人数'),
+          h('button', {
+            onClick: () => setServings(s => Math.max(1,s-1)),
+            style:{width:32,height:32,borderRadius:16,background:'#FF5E8A18',color:'#FF5E8A',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},
+          }, '−'),
+          h('span', { style:{fontSize:22,fontWeight:800,minWidth:28,textAlign:'center'} }, servings),
+          h('button', {
+            onClick: () => setServings(s => Math.min(10,s+1)),
+            style:{width:32,height:32,borderRadius:16,background:'#FF5E8A18',color:'#FF5E8A',fontSize:20,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},
+          }, '＋'),
+          h('span', { style:{fontSize:12,color:'#BBB'} }, '人前'),
+        ),
+      ),
+
+      // 材料リスト
+      h('div', { className:'card-label' }, '📦 材料'),
+      h('div', { style:{marginBottom:14} },
+        recipe.ings.map(([name, baseAmt, unit], i) =>
+          h('div', { key:i, style:{
+            display:'flex',justifyContent:'space-between',alignItems:'center',
+            padding:'7px 0',borderBottom:'1px solid #F5F5F5',
+          }},
+            h('span', { style:{fontSize:14,fontWeight:600} }, name),
+            h('span', { style:{fontSize:13,color:colBase,fontWeight:800} },
+              unit==='人分' ? servings+'人分' : unit==='適量' ? '適量'
+              : fmtAmt(baseAmt, servings, baseServ)+' '+unit
+            ),
+          )
+        )
+      ),
+
+      // 作り方
+      h('button', {
+        className:'btn btn-ghost', style:{marginBottom:12,fontSize:13},
+        onClick:()=>setShowSteps(p=>!p),
+      }, showSteps ? '▲ 手順を隠す' : '▼ 作り方を見る'),
+
+      showSteps && h('div', { className:'fi' },
+        recipe.steps.map((step, i) =>
+          h('div', { key:i, style:{display:'flex',gap:10,marginBottom:10,alignItems:'flex-start'} },
+            h('div', { style:{
+              width:24,height:24,borderRadius:12,flexShrink:0,
+              background:`linear-gradient(135deg,${colBase}AA,${colBase})`,
+              color:'#fff',fontSize:12,fontWeight:800,
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}, i+1),
+            h('div', { style:{fontSize:14,lineHeight:1.7,paddingTop:2} }, step),
+          )
+        )
+      ),
+
+      // 買い物追加
+      added
+        ? h('div', { style:{
+            padding:'12px',borderRadius:14,background:'#E8F5E9',
+            color:'#2E7D32',fontWeight:800,fontSize:14,textAlign:'center',
+          }}, '✅ 買い物メモに追加しました！')
+        : h('button', {
+            className:'btn btn-purple', style:{boxShadow:'none'},
+            onClick:addToShop,
+          }, '🛒 材料を買い物メモに追加する'),
+    ),
+  );
+}
+
+// ═══════════════════════ SHOPPING ════════════════════════════════════════════
+function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
+  const [text,    setText]    = useState('');
+  const [memId,   setMemId]   = useState(members[0]?.id ?? '');
+  const [catId,   setCatId]   = useState(shopCats[0]?.id ?? '');
+  const [filter,  setFilter]  = useState('all');
+  const [showMgr, setShowMgr] = useState(false);
+  const [newCatNm,setNewCatNm]= useState('');
+  const [newCatCl,setNewCatCl]= useState(PAL[0]);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (!memId && members[0]) setMemId(members[0].id); }, [members]);
+  useEffect(() => { if (!catId && shopCats[0]) setCatId(shopCats[0].id); }, [shopCats]);
+
+  const add = () => {
+    const t = clean(text);
+    if (!t || shopping.length >= LIM.items) return;
+    const cid = shopCats.some(c => c.id === catId) ? catId : shopCats[0]?.id ?? '';
+    setShopping(p => [...p, { id:uid(), text:t, memberId:memId, catId:cid, done:false }]);
+    setText('');
+    inputRef.current?.focus();
+  };
+  const toggle    = id => setShopping(p => p.map(i => i.id===id ? {...i,done:!i.done} : i));
+  const del       = id => setShopping(p => p.filter(i => i.id!==id));
+  const edit      = (id, changes) => setShopping(p => p.map(i => i.id===id ? {...i,...changes} : i));
+  const clearDone = ()  => setShopping(p => p.filter(i => !i.done));
+  const addCat = () => {
+    const name = clean(newCatNm);
+    if (!name || shopCats.length >= LIM.cats || shopCats.some(c => c.name===name)) return;
+    setShopCats(p => [...p, { id:uid(), name, color:cleanClr(newCatCl) }]);
+    setNewCatNm('');
+  };
+  const delCat = id => {
+    const next = shopCats.filter(c => c.id!==id);
+    if (!next.length) return;
+    const fb = next[0].id;
+    setShopCats(next);
+    setShopping(p => p.map(i => i.catId===id ? {...i,catId:fb} : i));
+    if (filter===id) setFilter('all');
+    if (catId===id)  setCatId(fb);
+  };
+
+  const pending  = shopping.filter(i => !i.done);
+  const done     = shopping.filter(i =>  i.done);
+  const catsUsed = shopCats.filter(c => shopping.some(i => i.catId===c.id));
+  const groups   = shopCats.map(cat => ({
+    cat,
+    pending: shopping.filter(i => i.catId===cat.id && !i.done),
+    done:    shopping.filter(i => i.catId===cat.id &&  i.done),
+  })).filter(g => g.pending.length+g.done.length > 0);
+  const filtered = filter==='all' ? null : shopping.filter(i => i.catId===filter);
+
+  return h(Fragment, null,
+    // Summary
+    h('div', { style:{display:'flex',gap:9,marginBottom:12} },
+      [{label:'残り',val:pending.length,color:'#FF5E8A',icon:'📝'},
+       {label:'完了',val:done.length,color:'#4CAF50',icon:'✅'}]
+      .map(s => h('div',{key:s.label,style:{flex:1,background:'#fff',borderRadius:16,padding:'12px 8px',textAlign:'center',boxShadow:'0 2px 10px rgba(0,0,0,.055)'}},
+        h('div',{style:{fontSize:22}},s.icon),
+        h('div',{style:{fontSize:26,fontWeight:800,color:s.color}},s.val),
+        h('div',{style:{fontSize:11,color:'#AAA',fontWeight:700}},s.label),
+      ))
+    ),
+    // Add card
+    h('div', { className:'card' },
+      h('div', { style:{display:'flex',gap:8,marginBottom:10} },
+        h('input', { ref:inputRef, className:'field', style:{margin:0,flex:1}, placeholder:'商品を追加…', maxLength:LIM.text,
+          value:text, onChange:e=>setText(e.target.value), onKeyDown:e=>e.key==='Enter'&&add() }),
+        h('button', { onClick:add, style:{padding:'0 18px',background:'#FF5E8A',color:'#fff',borderRadius:12,fontSize:24,fontWeight:900,boxShadow:'0 3px 12px rgba(255,94,138,.32)',flexShrink:0} }, '＋'),
+      ),
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '🏪 カテゴリ'),
+        h('div', { className:'chip-row' },
+          shopCats.map(cat => h('button', { key:cat.id, className:'chip'+(catId===cat.id?' on':''),
+            style:{color:catId===cat.id?cat.color:'#888',borderColor:catId===cat.id?cat.color:'#E5E5E5'},
+            onClick:()=>setCatId(cat.id) }, cat.name))
+        ),
+      ),
+      h('div', null,
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 担当'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:memId===m.id?m.color:'#E5E5E5',background:memId===m.id?m.color+'1A':'#fff',color:memId===m.id?m.color:'#666'},
+            onClick:()=>setMemId(m.id) }, m.emoji+' '+m.name))
+        ),
+      ),
+    ),
+    // Cat manager toggle
+    h('button', { className:'btn btn-ghost'+(showMgr?' warn':''), style:{marginBottom:10,width:'100%'}, onClick:()=>setShowMgr(p=>!p) },
+      showMgr ? '✕ カテゴリ管理を閉じる' : '⚙ カテゴリを管理・追加する'),
+    showMgr && h('div', { className:'card fi', style:{borderLeft:'3px solid #A855F7'} },
+      h('div', { className:'card-label' }, 'カテゴリ管理'),
+      shopCats.map(cat => h('div', { key:cat.id, className:'m-row' },
+        h('div', { style:{width:11,height:11,borderRadius:'50%',background:cat.color,flexShrink:0} }),
+        h('span', { style:{flex:1,fontSize:14,fontWeight:600} }, cat.name),
+        h('span', { style:{fontSize:11,color:'#BBB'} }, shopping.filter(i=>i.catId===cat.id).length+'件'),
+        h('button', { className:'del', disabled:shopCats.length<=1, style:{opacity:shopCats.length<=1?.25:1}, onClick:()=>delCat(cat.id) }, '✕'),
+      )),
+      shopCats.length < LIM.cats && h(Fragment, null,
+        h('div', { className:'sep' }, '新しいカテゴリ'),
+        h('input', { className:'field', placeholder:'カテゴリ名', maxLength:LIM.text, value:newCatNm, onChange:e=>setNewCatNm(e.target.value), onKeyDown:e=>e.key==='Enter'&&addCat() }),
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, 'カラー'),
+        h('div', { className:'palette' }, PAL.map(c => h('button', { key:c, className:'pal-dot'+(newCatCl===c?' on':''), style:{background:c}, onClick:()=>setNewCatCl(c) }))),
+        h('button', { className:'btn btn-purple', style:{boxShadow:'none',background:newCatNm.trim()?undefined:'#E0E0E0',color:newCatNm.trim()?'#fff':'#BBB'}, onClick:addCat, disabled:!newCatNm.trim() }, 'カテゴリを追加'),
+      ),
+    ),
+    // Filter chips
+    catsUsed.length > 1 && h('div', { className:'chip-row', style:{marginBottom:10} },
+      h('button', { className:'chip'+(filter==='all'?' on':''),
+        style:{color:filter==='all'?'#333':'#888',borderColor:filter==='all'?'#333':'#E5E5E5',background:filter==='all'?'#EEE':'#fff'},
+        onClick:()=>setFilter('all') }, '🗂 すべて'),
+      catsUsed.map(cat => {
+        const cnt = shopping.filter(i=>i.catId===cat.id&&!i.done).length;
+        return h('button', { key:cat.id, className:'chip'+(filter===cat.id?' on':''),
+          style:{color:filter===cat.id?cat.color:'#888',borderColor:filter===cat.id?cat.color:'#E5E5E5'},
+          onClick:()=>setFilter(cat.id) }, cat.name+(cnt>0?` (${cnt})`:''));
+      })
+    ),
+    // Items
+    filter==='all'
+      ? groups.length===0
+          ? h('div', {className:'empty'}, h('span',{className:'empty-ico'},'🛒'),'買い物リストは空です\n上から商品を追加しましょう')
+          : h(Fragment, null, groups.map(g => h('div', { key:g.cat.id, className:'cat-group su' },
+              h('div', { className:'cat-hdr' },
+                h('div', { className:'cat-dot', style:{background:g.cat.color} }),
+                h('div', { className:'cat-name', style:{color:g.cat.color} }, g.cat.name),
+                g.pending.length>0 && h('div', { className:'cat-cnt', style:{background:g.cat.color+'1A',color:g.cat.color} }, g.pending.length+'件'),
+              ),
+              h('div', { className:'cat-items' },
+                g.pending.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
+                g.done.length>0 && h('div', { style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4} },
+                  g.done.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
+                ),
+              ),
+            )))
+      : h('div', { className:'card' },
+          (filtered??[]).length===0
+            ? h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'📭'),'このカテゴリに商品はありません')
+            : h(Fragment,null,
+                (filtered??[]).filter(i=>!i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit})),
+                (filtered??[]).filter(i=>i.done).length>0&&h('div',{style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4}},
+                  (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit}))
+                ),
+              )
+        ),
+    done.length>0 && h('button', { className:'btn btn-ghost warn', style:{width:'100%',marginTop:4}, onClick:clearDone },
+      `✅ 完了済みを削除 (${done.length}件)`),
+  );
+}
+function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
+  const m = members.find(x => x.id===item.memberId) ?? members[0];
+  const cat = shopCats.find(c => c.id===item.catId) ?? shopCats[0];
+  const [editing,    setEditing]    = useState(false);
+  const [editText,   setEditText]   = useState(item.text);
+  const [editCatId,  setEditCatId]  = useState(item.catId);
+  const [editMemId,  setEditMemId]  = useState(item.memberId);
+  const inputRef = useRef(null);
+
+  const startEdit = e => {
+    e.stopPropagation();
+    setEditText(item.text); setEditCatId(item.catId); setEditMemId(item.memberId);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 80);
+  };
+  const saveEdit = () => {
+    const t = editText.trim();
+    if (t) onEdit(item.id, { text:t, catId:editCatId, memberId:editMemId });
+    setEditing(false);
+  };
+  const cancelEdit = () => setEditing(false);
+
+  if (editing) return h('div', { className:'shop-item', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    h('input', { ref:inputRef, className:'field', style:{margin:0,fontSize:15},
+      value:editText, onChange:e=>setEditText(e.target.value),
+      onKeyDown:e=>{ if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit(); }
+    }),
+    // カテゴリ選択
+    h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '🏪 カテゴリ'),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
+      shopCats.map(c => h('button', { key:c.id, onClick:()=>setEditCatId(c.id),
+        style:{
+          padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor: editCatId===c.id ? c.color : '#E5E5E5',
+          background:  editCatId===c.id ? c.color+'22' : '#fff',
+          color:       editCatId===c.id ? c.color : '#AAA',
+          transition:'all .12s',
+        }
+      }, c.name))
+    ),
+    // 担当者選択
+    h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '👤 担当'),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
+      members.map(m => h('button', { key:m.id, onClick:()=>setEditMemId(m.id),
+        style:{
+          padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor: editMemId===m.id ? m.color : '#E5E5E5',
+          background:  editMemId===m.id ? m.color+'22' : '#fff',
+          color:       editMemId===m.id ? m.color : '#AAA',
+          transition:'all .12s',
+        }
+      }, m.emoji+' '+m.name))
+    ),
+    h('div', { style:{display:'flex',gap:8} },
+      h('button', { onClick:saveEdit,
+        style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13} },
+        '✓ 保存'),
+      h('button', { onClick:cancelEdit,
+        style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13} },
+        '✕'),
+    ),
+  );
+
+  return h('div', { className:'shop-item'+(item.done?' done':'') },
+    h('button', { className:'chk'+(item.done?' on':''), onClick:()=>onToggle(item.id) },
+      item.done && h('span', { className:'chk-icon' }, '✓')),
+    h('span', { style:{fontSize:19,flexShrink:0} }, m?.emoji),
+    h('span', { className:'shop-txt'+(item.done?' done':''),
+      onClick: item.done ? undefined : startEdit,
+      style:{ cursor: item.done ? 'default' : 'pointer', flex:1 },
+      title: item.done ? '' : 'タップして編集',
+    }, item.text),
+    cat && !item.done && h('button', { onClick:startEdit,
+      style:{
+        fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:10,
+        background: cat.color+'18', color:cat.color, border:'1.5px solid '+cat.color+'44',
+        flexShrink:0, whiteSpace:'nowrap',
+      }
+    }, cat.name),
+    h('span', { className:'shop-who', style:{color:m?.color} }, m?.name),
+    h('button', { className:'del', onClick:()=>onDel(item.id) }, '✕'),
+  );
+}
+// ═══════════════════════ CALENDAR ════════════════════════════════════════════
+function CalTab({ events, setEvents, members }) {
+  const [cur,     setCur]     = useState(new Date());
+  const [sel,     setSel]     = useState(null);
+  const [show,    setShow]    = useState(false);
+  const [form, setForm] = useState({ title:'', date:'', time:'', allDay:true, memberId:members[0]?.id??'', note:'' });
+  const sf = k => v => setForm(p => ({...p,[k]:v}));
+  const now = new Date();
+  const yr=cur.getFullYear(), mo=cur.getMonth();
+  const fd=new Date(yr,mo,1).getDay(), dim=new Date(yr,mo+1,0).getDate();
+
+  // ── 過去の予定を自動削除（30日以上前） ────────────────────────────────────
+  useEffect(() => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+    setEvents(p => p.filter(e => e.date >= cutoffStr));
+  }, []);
+
+  const addEv = () => {
+    const title=clean(form.title), date=cleanDate(form.date);
+    if (!title||!date||events.length>=LIM.events) return;
+    setEvents(p=>[...p,{id:uid(),title,date,time:form.allDay?'':cleanTime(form.time),allDay:Boolean(form.allDay),memberId:form.memberId,note:clean(form.note,LIM.note)}]);
+    setForm({title:'',date:'',time:'',allDay:true,memberId:members[0]?.id??'',note:''});
+    setShow(false);
+  };
+  const delEv  = id => setEvents(p => p.filter(e => e.id!==id));
+  const editEv = (id, changes) => setEvents(p => p.map(e => e.id===id ? {...e,...changes} : e));
+
+  const dayEvs = d => {
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return events.filter(e=>e.date===ds).sort((a,b)=>{
+      if(a.allDay&&!b.allDay)return -1;if(!a.allDay&&b.allDay)return 1;
+      return(a.time||'').localeCompare(b.time||'');
+    });
+  };
+
+  // 翌日の予定のみ
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+  const tmrEvents = events.filter(e => e.date === tomorrowStr).sort((a,b)=>{
+    if(a.allDay&&!b.allDay)return -1;if(!a.allDay&&b.allDay)return 1;
+    return(a.time||'').localeCompare(b.time||'');
+  });
+
+  return h(Fragment,null,
+    h('div',{className:'cal-nav'},
+      h('button',{className:'cal-arr',onClick:()=>setCur(new Date(yr,mo-1))},'‹'),
+      h('div',{className:'cal-mo'},yr+'年 '+(mo+1)+'月'),
+      h('button',{className:'cal-arr',onClick:()=>setCur(new Date(yr,mo+1))},'›'),
+    ),
+    h('div',{className:'cal-grid'},
+      h('div',{className:'cal-head'},['日','月','火','水','木','金','土'].map((d,i)=>h('div',{key:d,className:'cal-dow'+(i===0?' s':i===6?' sa':'')},d))),
+      h('div',{className:'cal-body'},
+        Array(fd).fill(null).map((_,i)=>h('div',{key:'e'+i,className:'cal-cell empty'})),
+        Array(dim).fill(null).map((_,i)=>{
+          const d=i+1,dow=(fd+i)%7,devs=dayEvs(d);
+          const isToday=now.getDate()===d&&now.getMonth()===mo&&now.getFullYear()===yr;
+          return h('div',{key:d,className:'cal-cell'+(sel===d?' sel':''),onClick:()=>setSel(sel===d?null:d)},
+            h('div',{className:'cal-num'+(isToday?' today':dow===0?' s':dow===6?' sa':'')},d),
+            devs.length>0&&h('div',{className:'cal-dots'},devs.slice(0,4).map(ev=>{
+              const m=members.find(x=>x.id===ev.memberId)??members[0];
+              return h('div',{key:ev.id,className:'cal-dot',style:{background:m?.color??'#ccc'}});
+            })),
+          );
+        }),
+      ),
+    ),
+    // 日付タップ → その日の予定
+    sel!==null&&h('div',{className:'card su'},
+      h('div',{style:{fontWeight:800,color:'#FF5E8A',marginBottom:10,fontSize:15}},(mo+1)+'月'+sel+'日の予定'),
+      dayEvs(sel).length===0
+        ? h('div',{style:{color:'#BBB',fontSize:13,padding:'6px 0'}},'予定はありません')
+        : dayEvs(sel).map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,onEdit:editEv})),
+      h('button',{style:{marginTop:10,padding:'7px 16px',background:'#FFF0F5',border:'2px solid #FF5E8A',color:'#FF5E8A',borderRadius:10,fontSize:13,fontWeight:800},
+        onClick:()=>{const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(sel).padStart(2,'0')}`;sf('date')(ds);setShow(true)}},'＋ この日に追加'),
+    ),
+    h('button',{className:'btn btn-purple',style:{marginBottom:12},onClick:()=>setShow(p=>!p)},show?'✕ 閉じる':'＋ 予定を追加する'),
+    show&&h('div',{className:'card fi'},
+      h('div',{className:'card-label'},'新しい予定'),
+      h('input',{className:'field',placeholder:'タイトル',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
+      h('input',{className:'field',type:'date',value:form.date,onChange:e=>sf('date')(e.target.value)}),
+      h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10}},
+        h('button',{className:'toggle'+(form.allDay?' on':''),onClick:()=>setForm(p=>({...p,allDay:!p.allDay,time:''}))},form.allDay?'✓ 終日':'終日'),
+        !form.allDay?h('input',{className:'field',type:'time',style:{margin:0,flex:1},value:form.time,onChange:e=>sf('time')(e.target.value)}):h('span',{style:{fontSize:12,color:'#BBB'}},'→ タップして時間を指定'),
+      ),
+      h('div',{style:{marginBottom:10}},
+        h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'👤 誰の予定？'),
+        h('div',{className:'chips'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},onClick:()=>sf('memberId')(m.id)},m.emoji+' '+m.name))),
+      ),
+      h('input',{className:'field',placeholder:'メモ（任意）',maxLength:LIM.note,value:form.note,onChange:e=>sf('note')(e.target.value)}),
+      h('button',{className:'btn btn-grad',onClick:addEv},'追加する'),
+    ),
+    // 明日の予定
+    h('div',{className:'card'},
+      h('div',{style:{display:'flex',alignItems:'center',marginBottom:8}},
+        h('div',{className:'card-label',style:{margin:0,flex:1}},'明日の予定'),
+        h('span',{style:{fontSize:11,color:'#AAA',fontWeight:700}},
+          `${tomorrow.getMonth()+1}/${tomorrow.getDate()}（${'日月火水木金土'[tomorrow.getDay()]}）`),
+      ),
+      tmrEvents.length===0
+        ? h('div',{className:'empty',style:{padding:'12px 0'}},h('span',{className:'empty-ico'},'📅'),'明日の予定はありません')
+        : tmrEvents.map(ev=>h(EvRow,{key:ev.id,ev,members,onDel:delEv,onEdit:editEv,compact:true})),
+    ),
+  );
+}
+
+function EvRow({ ev, members, onDel, onEdit, compact }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ title:ev.title, date:ev.date, time:ev.time||'', allDay:ev.allDay, memberId:ev.memberId, note:ev.note||'' });
+  const sf = k => v => setF(p => ({...p,[k]:v}));
+  const m = members.find(x=>x.id===ev.memberId)??members[0];
+
+  const save = () => {
+    const title = clean(f.title), date = cleanDate(f.date);
+    if (!title||!date) return;
+    onEdit(ev.id, { title, date, time:f.allDay?'':cleanTime(f.time), allDay:Boolean(f.allDay), memberId:f.memberId, note:clean(f.note,200) });
+    setEditing(false);
+  };
+
+  if (editing) return h('div', { className:'ev-row', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    h('input',{className:'field',style:{margin:0},placeholder:'タイトル',maxLength:100,value:f.title,onChange:e=>sf('title')(e.target.value)}),
+    h('input',{className:'field',style:{margin:0},type:'date',value:f.date,onChange:e=>sf('date')(e.target.value)}),
+    h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+      h('button',{className:'toggle'+(f.allDay?' on':''),onClick:()=>setF(p=>({...p,allDay:!p.allDay,time:''}))},f.allDay?'✓ 終日':'終日'),
+      !f.allDay&&h('input',{className:'field',type:'time',style:{margin:0,flex:1},value:f.time,onChange:e=>sf('time')(e.target.value)}),
+    ),
+    h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',margin:'4px 0'}},'👤 誰の予定？'),
+    h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+      members.map(mm=>h('button',{key:mm.id,onClick:()=>sf('memberId')(mm.id),
+        style:{padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.memberId===mm.id?mm.color:'#E5E5E5',
+          background:f.memberId===mm.id?mm.color+'22':'#fff',
+          color:f.memberId===mm.id?mm.color:'#AAA',transition:'all .12s'}
+      },mm.emoji+' '+mm.name))
+    ),
+    h('input',{className:'field',style:{margin:'4px 0 0'},placeholder:'メモ（任意）',maxLength:200,value:f.note,onChange:e=>sf('note')(e.target.value)}),
+    h('div',{style:{display:'flex',gap:8,marginTop:4}},
+      h('button',{onClick:save,style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13}},'✓ 保存'),
+      h('button',{onClick:()=>setEditing(false),style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13}},'✕'),
+    ),
+  );
+
+  return h('div',{className:compact?'m-row':'ev-row'},
+    h('span',{style:{fontSize:20,flexShrink:0}},m?.emoji),
+    h('div',{style:{flex:1,minWidth:0},onClick:()=>setEditing(true),cursor:'pointer'},
+      h('div',{style:{fontSize:14,fontWeight:700,cursor:'pointer'}},ev.title),
+      h('div',{style:{display:'flex',gap:5,marginTop:3,flexWrap:'wrap',alignItems:'center'}},
+        compact&&h('span',{style:{fontSize:11,color:'#BBB'}},ev.date),
+        ev.allDay?h('span',{className:'badge badge-all'},'終日'):ev.time&&h('span',{className:'badge badge-t'},'🕐 '+ev.time),
+        h('span',{style:{fontSize:11,fontWeight:800,color:m?.color}},m?.name),
+      ),
+      ev.note&&h('div',{style:{fontSize:12,color:'#AAA',marginTop:2}},ev.note),
+    ),
+    h('button',{style:{fontSize:13,padding:'4px 8px',borderRadius:10,background:'#F5F5F5',color:'#AAA',fontWeight:700,flexShrink:0,marginRight:4},onClick:()=>setEditing(true)},'✏️'),
+    h('button',{className:'del',onClick:()=>onDel(ev.id)},'✕'),
+  );
+}
+
+
+// ═══════════════════════ BUDGET ══════════════════════════════════════════════
+const BCAT_ICONS = {食費:'🍽',家賃:'🏠',電気代:'⚡',ガス代:'🔥',水道代:'💧',日用品:'🧴',交通費:'🚃',娯楽:'🎮',医療:'💊',教育:'📚',その他:'📦'};
+
+function DonutChart({ data, total, selected, onSelect }) {
+  // data: [{cat, val, color}]
+  const size = 200, cx = 100, cy = 100, r = 72, inner = 44;
+  let angle = -Math.PI / 2;
+  const slices = data.map(d => {
+    const start = angle;
+    const sweep = (d.val / total) * 2 * Math.PI;
+    angle += sweep;
+    const end = angle;
+    const large = sweep > Math.PI ? 1 : 0;
+    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end),   y2 = cy + r * Math.sin(end);
+    const ix1 = cx + inner * Math.cos(start), iy1 = cy + inner * Math.sin(start);
+    const ix2 = cx + inner * Math.cos(end),   iy2 = cy + inner * Math.sin(end);
+    const path = `M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z`;
+    return { ...d, path, midAngle: start + sweep / 2 };
+  });
+  const selData = selected ? data.find(d => d.cat === selected) : null;
+
+  return h('svg', { viewBox:`0 0 ${size} ${size}`, style:{width:'100%',maxWidth:220,display:'block',margin:'0 auto',cursor:'pointer'} },
+    slices.map(s => {
+      const isSelected = selected === s.cat;
+      const scale = isSelected ? 1.06 : 1;
+      return h('path', {
+        key: s.cat, d: s.path,
+        fill: s.color,
+        opacity: selected && !isSelected ? 0.45 : 1,
+        transform: `translate(${cx},${cy}) scale(${scale}) translate(${-cx},${-cy})`,
+        style: { transition: 'all .2s', filter: isSelected ? 'drop-shadow(0 3px 8px rgba(0,0,0,.18))' : 'none' },
+        onClick: () => onSelect(selected === s.cat ? null : s.cat),
+      });
+    }),
+    // Center text
+    h('text', { x: cx, y: cy - 8, textAnchor:'middle', style:{fontSize:11,fill:'#AAA',fontWeight:700} },
+      selData ? selData.cat : '支出合計'),
+    h('text', { x: cx, y: cy + 12, textAnchor:'middle', style:{fontSize:15,fill:'#333',fontWeight:800} },
+      '¥' + (selData ? selData.val : total).toLocaleString()),
+    selData && h('text', { x: cx, y: cy + 28, textAnchor:'middle', style:{fontSize:11,fill:selData.color,fontWeight:700} },
+      (selData.val/total*100).toFixed(0) + '%'),
+  );
+}
+
+function BudgetTab({ budget, setBudget, members }) {
+  const now = new Date();
+  const [moOffset, setMoOffset] = useState(0);
+  const [show,   setShow]   = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [selCat, setSelCat] = useState(null);
+  const [form,   setForm]   = useState({
+    title:'', amount:'', category:'食費',
+    memberId: members[0]?.id ?? '',
+    date: today(), type: 'expense',
+  });
+  const sf = k => v => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => { if (!form.memberId && members[0]) sf('memberId')(members[0].id); }, [members]);
+
+  const add = () => {
+    const title = (form.title || '').trim();
+    if (!title) { alert('内容を入力してください'); return; }
+    const rawAmt = String(form.amount).replace(/[^0-9]/g, '');
+    const amount = parseInt(rawAmt, 10);
+    if (!amount || amount <= 0) { alert('金額を入力してください'); return; }
+    const cat      = BCATS.includes(form.category) ? form.category : 'その他';
+    const type     = form.type === 'income' ? 'income' : 'expense';
+    const memberId = form.memberId || members[0]?.id || '';
+    const date     = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? form.date : today();
+    setBudget(p => [...p, { id:uid(), title, amount, category:cat, memberId, date, type }]);
+    setForm(f => ({ ...f, title:'', amount:'', date:today() }));
+    setShow(false);
+  };
+
+  const del   = id => setBudget(p => p.filter(b => b.id !== id));
+  const editB = (id, changes) => setBudget(p => p.map(b => b.id===id ? {...b,...changes} : b));
+  const dupB  = b => setBudget(p => [...p, {...b, id:uid(), date:today()}]);
+
+  // ── ローカル日付でYYYY-MM取得（タイムゾーンバグ修正）────────────────────────
+  const localYM = (y, m) => `${y}-${String(m+1).padStart(2,'0')}`;
+
+  // Month navigation
+  const viewDate = new Date(now.getFullYear(), now.getMonth() + moOffset, 1);
+  const viewM    = localYM(viewDate.getFullYear(), viewDate.getMonth());
+  const moLabel  = `${viewDate.getFullYear()}年${viewDate.getMonth()+1}月`;
+
+  // 前月
+  const prevDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
+  const prevM    = localYM(prevDate.getFullYear(), prevDate.getMonth());
+
+  const monthly  = budget.filter(b => b.date.startsWith(viewM));
+  const prevMon  = budget.filter(b => b.date.startsWith(prevM));
+
+  const totExp   = monthly.filter(b => b.type==='expense').reduce((s,b) => s+b.amount, 0);
+  const totInc   = monthly.filter(b => b.type==='income').reduce((s,b) => s+b.amount, 0);
+  const bal      = totInc - totExp;
+  const prevExp  = prevMon.filter(b => b.type==='expense').reduce((s,b) => s+b.amount, 0);
+  const prevInc  = prevMon.filter(b => b.type==='income').reduce((s,b) => s+b.amount, 0);
+  const diffExp  = totExp - prevExp;  // + なら増加
+  const diffInc  = totInc - prevInc;
+
+  // メンバー別支出
+  const memberExp = members.map(m => ({
+    ...m,
+    val: monthly.filter(b => b.type==='expense' && b.memberId===m.id).reduce((s,b) => s+b.amount, 0),
+  })).filter(m => m.val > 0);
+
+  // Donut data
+  const donutData = BCATS.map(cat => ({
+    cat, color: BCLR[cat],
+    val: monthly.filter(b => b.type==='expense' && b.category===cat).reduce((s,b) => s+b.amount, 0),
+  })).filter(d => d.val > 0);
+
+  // List
+  const listItems = [...budget]
+    .filter(b => filter==='all' ? true : b.type===filter)
+    .filter(b => b.date.startsWith(viewM))
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  const fmt     = v => '¥' + v.toLocaleString();
+  const fmtDiff = v => (v > 0 ? '▲' : v < 0 ? '▼' : '－') + '¥' + Math.abs(v).toLocaleString();
+
+  return h(Fragment, null,
+
+    // ── Month nav ────────────────────────────────────────────────────────────
+    h('div', { style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12} },
+      h('button', { className:'cal-arr', onClick:()=>setMoOffset(o=>o-1) }, '‹'),
+      h('div', { style:{fontWeight:800,fontSize:17} }, moLabel),
+      h('button', { className:'cal-arr', onClick:()=>setMoOffset(o=>o+1), style:{opacity:moOffset>=0?.35:1} }, '›'),
+    ),
+
+    // ── Summary cards ────────────────────────────────────────────────────────
+    h('div', { className:'sum-grid', style:{marginBottom:8} },
+      [
+        {label:'収入', val:totInc, color:'#4CAF50', icon:'📈', diff:diffInc, diffGood: diffInc>=0},
+        {label:'支出', val:totExp, color:'#FF5E8A', icon:'📉', diff:diffExp, diffGood: diffExp<=0},
+        {label:'収支', val:bal,    color:bal>=0?'#4CAF50':'#FF5E8A', icon:'💹', diff:null},
+      ].map(s => h('div', { key:s.label, className:'sum-card' },
+        h('div', { style:{fontSize:22,marginBottom:2} }, s.icon),
+        h('div', { style:{fontSize:10,color:'#AAA',fontWeight:700,marginBottom:2} }, s.label),
+        h('div', { style:{fontSize:13,fontWeight:800,color:s.color} },
+          (s.val < 0 ? '-' : '') + fmt(Math.abs(s.val))
+        ),
+        s.diff !== null && prevExp > 0 && h('div', {
+          style:{fontSize:9,fontWeight:800,marginTop:2,
+            color: s.diffGood ? '#4CAF50' : '#FF5E8A'}
+        }, fmtDiff(s.diff) + ' 前月比'),
+      ))
+    ),
+
+    // ── メンバー別支出 ─────────────────────────────────────────────────────────
+    memberExp.length > 1 && h('div', { className:'card', style:{marginBottom:12, padding:'12px 14px'} },
+      h('div', { className:'card-label' }, '👤 メンバー別支出'),
+      h('div', { style:{display:'flex',gap:8,flexWrap:'wrap'} },
+        memberExp.sort((a,b)=>b.val-a.val).map(m =>
+          h('div', { key:m.id, style:{
+            flex:'1 1 auto', minWidth:80,
+            background: m.color+'14', borderRadius:14,
+            padding:'10px 12px', textAlign:'center',
+            border:`2px solid ${m.color}33`,
+          }},
+            h('div', { style:{fontSize:22} }, m.emoji),
+            h('div', { style:{fontSize:11,fontWeight:800,color:m.color,marginTop:2} }, m.name),
+            h('div', { style:{fontSize:13,fontWeight:800,color:'#333',marginTop:2} }, fmt(m.val)),
+            h('div', { style:{fontSize:10,color:'#AAA'} },
+              totExp > 0 ? (m.val/totExp*100).toFixed(0)+'%' : ''),
+          )
+        )
+      ),
+    ),
+
+    // ── Donut chart ──────────────────────────────────────────────────────────
+    totExp > 0 && h('div', { className:'card', style:{marginBottom:12} },
+      h('div', { className:'card-label' }, '支出の内訳（タップで詳細）'),
+      h(DonutChart, { data:donutData, total:totExp, selected:selCat, onSelect:setSelCat }),
+      h('div', { style:{display:'flex',flexWrap:'wrap',gap:'6px 12px',marginTop:10,justifyContent:'center'} },
+        donutData.map(d => h('button', {
+          key: d.cat,
+          onClick: () => setSelCat(s => s===d.cat ? null : d.cat),
+          style:{
+            display:'flex',alignItems:'center',gap:5,padding:'4px 10px',
+            borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+            borderColor: selCat===d.cat ? d.color : '#E5E5E5',
+            background:  selCat===d.cat ? d.color+'18' : '#fff',
+            color:       selCat===d.cat ? d.color : '#888',
+            transition:'all .15s',
+          }
+        }, BCAT_ICONS[d.cat]+' '+d.cat))
+      ),
+    ),
+
+    // ── 変動費トレンド ────────────────────────────────────────────────────────
+    h('div', { className:'card', style:{marginBottom:12} },
+      h('div', { className:'card-label' }, '📊 変動費の月次推移（直近6ヶ月）'),
+      h('div', { style:{fontSize:10,color:'#AAA',marginBottom:8} }, '電気・ガス・水道・食費'),
+      (() => {
+        // 直近6ヶ月のYM配列
+        const months = Array.from({length:6}, (_,i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - (5-i), 1);
+          return { ym: localYM(d.getFullYear(), d.getMonth()), label: (d.getMonth()+1)+'月' };
+        });
+        const TREND_CATS = ['食費','その他'];
+        // 食費・電気・ガス・水道を変動費として扱う（カテゴリ名で判定）
+        const VARIABLE = new Set(['食費','電気代','ガス代','水道代']);
+        // 月×カテゴリの合計
+        const catColors = { '食費':'#FF5E8A','日用品':'#4CAF50','その他':'#9B59B6' };
+        const variableCats = BCATS.filter(c => VARIABLE.has(c));
+        const maxVal = Math.max(1, ...months.flatMap(({ym}) =>
+          variableCats.map(cat =>
+            budget.filter(b=>b.type==='expense'&&b.category===cat&&b.date.startsWith(ym)).reduce((s,b)=>s+b.amount,0)
+          )
+        ));
+        const W = 320, H = 140, PAD = {t:10,r:16,b:28,l:52};
+        const gW = W-PAD.l-PAD.r, gH = H-PAD.t-PAD.b;
+        const xPos = i => PAD.l + i*(gW/(months.length-1));
+        const yPos = v => PAD.t + gH - (v/maxVal)*gH;
+        const fmtY = v => v>=10000 ? (v/10000).toFixed(0)+'万' : v>=1000 ? (v/1000).toFixed(0)+'千' : v;
+
+        return h('svg', { viewBox:`0 0 ${W} ${H}`, style:{width:'100%',overflow:'visible'} },
+          // Y軸目盛り
+          [0,0.5,1].map(r => {
+            const y = yPos(maxVal*r);
+            return h('g', {key:r},
+              h('line', {x1:PAD.l,y1:y,x2:W-PAD.r,y2:y,stroke:'#F0F0F0',strokeWidth:1}),
+              h('text', {x:PAD.l-4,y:y+4,textAnchor:'end',style:{fontSize:9,fill:'#CCC'}}, fmtY(Math.round(maxVal*r))),
+            );
+          }),
+          // X軸ラベル
+          months.map(({label},i) =>
+            h('text', {key:i, x:xPos(i), y:H-4, textAnchor:'middle', style:{fontSize:9,fill:'#AAA'}}, label)
+          ),
+          // 各カテゴリの折れ線
+          variableCats.map(cat => {
+            const col = BCLR[cat] ?? '#AAA';
+            const vals = months.map(({ym}) =>
+              budget.filter(b=>b.type==='expense'&&b.category===cat&&b.date.startsWith(ym)).reduce((s,b)=>s+b.amount,0)
+            );
+            const pts = vals.map((v,i) => `${xPos(i)},${yPos(v)}`).join(' ');
+            return h('g', {key:cat},
+              h('polyline', {points:pts, fill:'none', stroke:col, strokeWidth:2.5, strokeLinejoin:'round', strokeLinecap:'round'}),
+              vals.map((v,i) => v>0 && h('circle', {key:i, cx:xPos(i), cy:yPos(v), r:4, fill:col, stroke:'#fff', strokeWidth:1.5})),
+            );
+          }),
+        );
+      })(),
+      // 凡例
+      h('div', { style:{display:'flex',gap:12,marginTop:8,flexWrap:'wrap'} },
+        BCATS.filter(c=>['食費','電気代','ガス代','水道代'].includes(c)).map(cat =>
+          h('div', {key:cat, style:{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#666'}},
+            h('div', {style:{width:16,height:3,borderRadius:2,background:BCLR[cat]}}),
+            cat,
+          )
+        )
+      ),
+    ),
+
+    // ── Add button ───────────────────────────────────────────────────────────
+    h('button', {
+      className:'btn btn-purple', style:{marginBottom:12},
+      onClick:()=>setShow(p=>!p),
+    }, show ? '✕ 閉じる' : '＋ 収支を記録する'),
+
+    // ── Add form ─────────────────────────────────────────────────────────────
+    show && h('div', { className:'card fi' },
+      h('div', { className:'type-row' },
+        [{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t =>
+          h('button', { key:t.k, className:'type-btn'+(form.type===t.k?' on':''), onClick:()=>sf('type')(t.k) }, t.label)
+        )
+      ),
+      h('input',{className:'field',placeholder:'内容（例：スーパー、電車代）',maxLength:LIM.text,value:form.title,onChange:e=>sf('title')(e.target.value)}),
+      h('div', { style:{position:'relative',marginBottom:10} },
+        h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:18,fontWeight:800,color:'#CCC'} }, '¥'),
+        h('input', { className:'field', style:{paddingLeft:30,marginBottom:0,fontSize:20,fontWeight:800,letterSpacing:1},
+          type:'number', inputMode:'numeric', placeholder:'0', min:0, max:LIM.amount, value:form.amount, onChange:e=>sf('amount')(e.target.value) }),
+      ),
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:8} }, 'カテゴリ'),
+        h('div', { style:{display:'flex',flexWrap:'wrap',gap:8} },
+          BCATS.map(c => h('button', { key:c, onClick:()=>sf('category')(c),
+            style:{ padding:'8px 12px',borderRadius:14,border:'2px solid',fontSize:13,fontWeight:700,
+              display:'flex',alignItems:'center',gap:5,
+              borderColor:form.category===c?BCLR[c]:'#E5E5E5',
+              background:form.category===c?BCLR[c]+'22':'#fff',
+              color:form.category===c?BCLR[c]:'#888', transition:'all .15s' }
+          }, BCAT_ICONS[c]+' '+c))
+        ),
+      ),
+      h('input', { className:'field', type:'date', value:form.date, onChange:e=>sf('date')(e.target.value) }),
+      h('div', { style:{marginBottom:10} },
+        h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6} }, '👤 誰が？'),
+        h('div', { className:'chips' },
+          members.map(m => h('button', { key:m.id, className:'m-chip',
+            style:{borderColor:form.memberId===m.id?m.color:'#E5E5E5',background:form.memberId===m.id?m.color+'1A':'#fff',color:form.memberId===m.id?m.color:'#666'},
+            onClick:()=>sf('memberId')(m.id) }, m.emoji+' '+m.name))
+        ),
+      ),
+      h('button', { className:'btn btn-grad', onClick:add }, '追加する'),
+    ),
+
+    // ── Filter ───────────────────────────────────────────────────────────────
+    h('div', { className:'chip-row', style:{marginBottom:10} },
+      [{k:'all',l:'すべて'},{k:'expense',l:'💸 支出'},{k:'income',l:'💰 収入'}].map(f =>
+        h('button', { key:f.k, className:'chip'+(filter===f.k?' on':''),
+          style:{color:filter===f.k?'#333':'#888',borderColor:filter===f.k?'#333':'#E5E5E5',background:filter===f.k?'#EEE':'#fff'},
+          onClick:()=>setFilter(f.k) }, f.l)
+      )
+    ),
+
+    // ── List ─────────────────────────────────────────────────────────────────
+    h('div', { className:'card' },
+      listItems.length === 0
+        ? h('div', { className:'empty', style:{padding:'16px 0'} },
+            h('span', { className:'empty-ico' }, '💳'), 'この月の記録はありません')
+        : listItems.map(b => h(BudgetRow, { key:b.id, b, members, onEdit:editB, onDel:del, onDup:dupB }))
+    ),
+  );
+}
+
+function BudgetRow({ b, members, onEdit, onDel, onDup }) {
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ title:b.title, amount:String(b.amount), category:b.category, memberId:b.memberId, date:b.date, type:b.type });
+  const sf = k => v => setF(p => ({...p,[k]:v}));
+  const m = members.find(x => x.id===b.memberId) ?? members[0];
+  const fmt = v => '¥'+v.toLocaleString();
+
+  const save = () => {
+    const title = (f.title||'').trim();
+    const amount = parseInt(String(f.amount).replace(/[^0-9]/g,''),10);
+    if (!title || !amount) return;
+    onEdit(b.id, { title, amount, category:f.category, memberId:f.memberId, date:f.date, type:f.type });
+    setEditing(false);
+  };
+
+  if (editing) return h('div', { className:'b-row', style:{flexDirection:'column',alignItems:'stretch',gap:8,padding:'10px 0'} },
+    // type toggle
+    h('div', { className:'type-row' },
+      [{k:'expense',label:'💸 支出'},{k:'income',label:'💰 収入'}].map(t =>
+        h('button', { key:t.k, className:'type-btn'+(f.type===t.k?' on':''), onClick:()=>sf('type')(t.k) }, t.label)
+      )
+    ),
+    h('input', { className:'field', style:{margin:0}, placeholder:'内容', maxLength:100, value:f.title, onChange:e=>sf('title')(e.target.value) }),
+    h('div', { style:{position:'relative'} },
+      h('span', { style:{position:'absolute',left:14,top:'50%',transform:'translateY(-50%)',fontSize:16,fontWeight:800,color:'#CCC'} }, '¥'),
+      h('input', { className:'field', style:{paddingLeft:28,margin:0,fontSize:18,fontWeight:800},
+        type:'number', inputMode:'numeric', value:f.amount, onChange:e=>sf('amount')(e.target.value) }),
+    ),
+    h('div', { style:{display:'flex',flexWrap:'wrap',gap:6,margin:'4px 0'} },
+      BCATS.map(c => h('button', { key:c, onClick:()=>sf('category')(c),
+        style:{ padding:'6px 10px',borderRadius:12,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.category===c?BCLR[c]:'#E5E5E5',
+          background:f.category===c?BCLR[c]+'22':'#fff',
+          color:f.category===c?BCLR[c]:'#AAA' }
+      }, BCAT_ICONS[c]+' '+c))
+    ),
+    h('input', { className:'field', style:{margin:0}, type:'date', value:f.date, onChange:e=>sf('date')(e.target.value) }),
+    h('div', { style:{display:'flex',gap:6,flexWrap:'wrap'} },
+      members.map(mm => h('button', { key:mm.id, onClick:()=>sf('memberId')(mm.id),
+        style:{ padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+          borderColor:f.memberId===mm.id?mm.color:'#E5E5E5',
+          background:f.memberId===mm.id?mm.color+'22':'#fff',
+          color:f.memberId===mm.id?mm.color:'#AAA' }
+      }, mm.emoji+' '+mm.name))
+    ),
+    h('div', { style:{display:'flex',gap:8} },
+      h('button', { onClick:save, style:{flex:1,padding:'9px',borderRadius:12,background:'#FF5E8A',color:'#fff',fontWeight:800,fontSize:13} }, '✓ 保存'),
+      h('button', { onClick:()=>setEditing(false), style:{padding:'9px 16px',borderRadius:12,background:'#F5F5F5',color:'#AAA',fontWeight:800,fontSize:13} }, '✕'),
+    ),
+  );
+
+  return h('div', { className:'b-row' },
+    h('div', { className:'b-icon', style:{background:BCLR[b.category]+'28',fontSize:20} }, BCAT_ICONS[b.category]),
+    h('div', { style:{flex:1,minWidth:0}, onClick:()=>setEditing(true), cursor:'pointer' },
+      h('div', { style:{fontSize:14,fontWeight:700,cursor:'pointer'} }, b.title),
+      h('div', { style:{fontSize:11,color:'#AAA',marginTop:1,display:'flex',gap:6,alignItems:'center'} },
+        h('span', null, b.date),
+        h('span', { style:{color:BCLR[b.category],fontWeight:700} }, BCAT_ICONS[b.category]+b.category),
+        h('span', { style:{color:m?.color,fontWeight:700} }, m?.emoji+m?.name),
+      ),
+    ),
+    h('div', { style:{fontWeight:800,color:b.type==='income'?'#4CAF50':'#FF5E8A',fontSize:15,flexShrink:0,marginRight:4} },
+      (b.type==='income'?'+':'-')+fmt(b.amount)),
+    h('button', { onClick:()=>onDup(b), style:{fontSize:13,padding:'3px 7px',borderRadius:8,background:'#F0F0F0',color:'#888',marginRight:4}, title:'複製' }, '📋'),
+    h('button', { className:'del', onClick:()=>onDel(b.id) }, '✕'),
+  );
+}
+
+
+// ═══════════════════════ TASK KANBAN (3D) ════════════════════════════════════
+const TK_COL=[{id:'todo',n:'To Do',c:'#FF8050'},{id:'doing',n:'Doing',c:'#A855F7'},{id:'done',n:'Done',c:'#4CAF50'}];
+const TK_PRI=['低','中','高'];
+const TK_FONT="'M PLUS Rounded 1c',-apple-system,'Hiragino Sans',sans-serif";
+const TK_TOP=52;
+
+function createBoard(cvs,root,st){
+  const TH={bg:'#F4F1EE',lane:'#EAE4DC',ink:'#1E1E1E',sub:'#8a8a8a',card:'#FFFFFF'};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const R=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
+  R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.setClearColor(TH.bg);
+  const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(24,1,10,6000);
+  const sun=new THREE.DirectionalLight(0xffffff,.47);sun.position.set(-250,350,900);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0004;
+  S.add(new THREE.AmbientLight(0xffffff,.58),sun,sun.target);
+  const DEPTH=14,cards=new Map();
+  let L={},scrollY=0,P=null,lanes=[],heads=[],raf=0,ver=0;
+  const mem=id=>{const a=st.current.members;return a.find(m=>m.id===id)||a[0]||{name:'',emoji:'👤',color:'#78909C'}};
+  const visible=c=>st.current.tasks.filter(t=>t.c===c&&(st.current.fil==='all'||t.m===st.current.fil));
+  const K=()=>Math.max(2,Math.min(devicePixelRatio,3));
+  const cv2=(w,h)=>{const c=document.createElement('canvas'),k=K();c.width=w*k;c.height=h*k;const x=c.getContext('2d');x.scale(k,k);return[c,x]};
+  function rr(w,h,r){const s=new THREE.Shape(),x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+  function geo(w,h){const g=new THREE.ExtrudeGeometry(rr(w,h,10),{depth:DEPTH,bevelEnabled:false,curveSegments:6}),p=g.attributes.position,u=g.attributes.uv;for(let i=0;i<p.count;i++)u.setXY(i,(p.getX(i)+w/2)/w,(p.getY(i)+h/2)/h);return g}
+  function wrap(x,t,mw,ml){const a=[];let c='';for(const ch of t){if(x.measureText(c+ch).width>mw&&c){a.push(c);c=ch}else c+=ch}if(c)a.push(c);if(a.length>ml){a.length=ml;a[ml-1]=a[ml-1].slice(0,-1)+'…'}return a}
+  function cardTex(t){const[c,x]=cv2(L.cw,L.ch),m=mem(t.m),done=t.c==='done',fs=L.fs;
+    x.fillStyle=TH.card;x.fillRect(0,0,L.cw,L.ch);x.fillStyle=m.color;x.fillRect(0,0,7,L.ch);
+    x.globalAlpha=done?.55:1;x.fillStyle=TH.ink;x.font=`700 ${fs}px ${TK_FONT}`;x.textBaseline='top';
+    wrap(x,t.t,L.cw-32,3).forEach((l,i)=>{const y=10+i*fs*1.3;x.fillText(l,17,y);if(done)x.fillRect(17,y+fs*.55,x.measureText(l).width,1.6)});
+    const mf=Math.max(11,Math.round(fs*.82)),my=L.ch-mf-10;x.font=`700 ${mf}px ${TK_FONT}`;
+    x.fillStyle=m.color;x.fillText(m.emoji+' '+m.name,17,my,L.cw-58);
+    x.textAlign='right';x.fillStyle=t.p===2?'#FF5E8A':TH.sub;x.fillText(TK_PRI[t.p]||'',L.cw-10,my);
+    if(done){x.fillStyle=TK_COL[2].c;x.font=`800 ${fs+2}px ${TK_FONT}`;x.fillText('✓',L.cw-10,8)}
+    const tx=new THREE.CanvasTexture(c);tx.anisotropy=4;return tx}
+  function headTex(col,n){const[c,x]=cv2(L.colW,L.hh);x.fillStyle=TH.lane;x.fillRect(0,0,L.colW,L.hh);x.fillStyle=col.c;x.beginPath();x.arc(18,L.hh/2,6,0,7);x.fill();
+    x.fillStyle=TH.ink;x.textBaseline='middle';x.font=`800 16px ${TK_FONT}`;x.fillText(col.n,31,L.hh/2+1);x.textAlign='right';x.fillStyle=TH.sub;x.fillText(n,L.colW-12,L.hh/2+1);return new THREE.CanvasTexture(c)}
+  const laneX=i=>L.pad+L.colW/2+i*(L.colW+L.gap)-L.W/2,slotY=i=>L.H/2-(L.top+4+L.hh+8+i*(L.ch+L.gapY)+L.ch/2-scrollY);
+  const maxS=()=>Math.max(0,Math.max(...TK_COL.map(c=>visible(c.id).length))*(L.ch+L.gapY)+L.hh+8+100-(L.H-L.top-8));
+  const laneAt=px=>clamp(Math.floor((px-L.pad+L.gap/2)/(L.colW+L.gap)),0,2);
+  function kill(o){S.remove(o.g);o.m.geometry.dispose();o.m.material.forEach(m=>{m.map&&m.map.dispose();m.dispose()})}
+  function mk(t,key){const g=new THREE.Group(),me=new THREE.Mesh(geo(L.cw,L.ch),[new THREE.MeshLambertMaterial({map:cardTex(t)}),new THREE.MeshLambertMaterial({color:mem(t.m).color})]);
+    me.castShadow=true;me.userData.id=t.id;g.add(me);S.add(g);return{g,m:me,key,t,fresh:true}}
+  function retarget(snap){cards.forEach(o=>{o.tx=laneX(o.ci);o.ty=slotY(o.i);if(snap||o.fresh){if(!(P&&P.mode==='drag'&&P.o===o))o.g.position.set(o.tx,o.ty,0);o.fresh=false}})}
+  function sync(){if(!L.W)return;const seen=new Set();
+    TK_COL.forEach((col,ci)=>visible(col.id).forEach((t,i)=>{seen.add(t.id);const m=mem(t.m),key=[t.t,t.m,m.name,m.emoji,m.color,t.p,t.c,L.cw,L.ch,ver].join('|');let o=cards.get(t.id);
+      if(!o||o.key!==key){const old=o;o=mk(t,key);if(old){o.g.position.copy(old.g.position);o.g.rotation.copy(old.g.rotation);o.fresh=false;kill(old)}cards.set(t.id,o)}
+      o.t=t;o.ci=ci;o.i=i;o.hold=false}));
+    cards.forEach((o,id)=>{if(!seen.has(id)){kill(o);cards.delete(id)}});
+    scrollY=clamp(scrollY,0,maxS());retarget(false);
+    heads.forEach((h,i)=>{if(h.material.map)h.material.map.dispose();h.material.map=headTex(TK_COL[i],visible(TK_COL[i].id).length);h.material.needsUpdate=true})}
+  function build(){L.W=root.clientWidth;L.H=root.clientHeight;if(!L.W||!L.H)return;R.setSize(L.W,L.H);
+    L.top=TK_TOP;L.pad=8;L.gap=8;L.colW=(L.W-2*L.pad-2*L.gap)/3;L.cw=Math.round(L.colW-12);L.fs=Math.round(clamp(L.colW/9.5,13,17));L.ch=Math.round(L.fs*3.9+46);L.gapY=10;L.hh=44;
+    const d=L.H/(2*Math.tan(12*Math.PI/180));cam.aspect=L.W/L.H;cam.position.set(0,0,d);cam.updateProjectionMatrix();
+    const sc=sun.shadow.camera,e=Math.max(L.W,L.H);sc.left=sc.bottom=-e;sc.right=sc.top=e;sc.near=1;sc.far=3000;sc.updateProjectionMatrix();
+    lanes.concat(heads).forEach(m=>{S.remove(m);m.geometry.dispose();m.material.map&&m.material.map.dispose();m.material.dispose()});lanes=[];heads=[];
+    const lh=L.H-L.top-12;
+    TK_COL.forEach((c,i)=>{const l=new THREE.Mesh(new THREE.PlaneGeometry(L.colW,lh),new THREE.MeshLambertMaterial({color:TH.lane}));l.position.set(laneX(i),L.H/2-(L.top+4+lh/2),-.5);l.receiveShadow=true;S.add(l);lanes.push(l);
+      const h=new THREE.Mesh(new THREE.PlaneGeometry(L.colW,L.hh),new THREE.MeshLambertMaterial());h.position.set(laneX(i),L.H/2-(L.top+4+L.hh/2),DEPTH+2);S.add(h);heads.push(h)});
+    cards.forEach(kill);cards.clear();sync()}
+  const pt=e=>{const r=cvs.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+  const rc=new THREE.Raycaster(),v2=new THREE.Vector2();
+  function pick(px,py){if(py<L.top+4+L.hh)return null;v2.set(px/L.W*2-1,-(py/L.H)*2+1);rc.setFromCamera(v2,cam);const h=rc.intersectObjects([...cards.values()].map(o=>o.m))[0];return h?cards.get(h.object.userData.id):null}
+  const hl=ci=>lanes.forEach((l,i)=>{l.material.color.set(TH.lane);if(i===ci)l.material.color.lerp(new THREE.Color(TK_COL[i].c),.2)});
+  function moveTask(id,col,idx){const cur=st.current.tasks,t=cur.find(x=>x.id===id);if(!t)return;const list=visible(col).filter(x=>x.id!==id),rest=cur.filter(x=>x.id!==id),nt={...t,c:col},ref=list[idx];if(ref)rest.splice(rest.findIndex(x=>x.id===ref.id),0,nt);else rest.push(nt);st.current.setTasks(rest)}
+  cvs.addEventListener('pointerdown',e=>{if(P)return;cvs.setPointerCapture(e.pointerId);const[px,py]=pt(e),o=pick(px,py);P={o,x0:px,y0:py,cx:px,cy:py,lx:px,ly:py,sy:scrollY,mode:'wait'};if(o){P.ox=o.g.position.x-(px-L.W/2);P.oy=o.g.position.y-(L.H/2-py)}});
+  cvs.addEventListener('pointermove',e=>{if(!P)return;const[px,py]=pt(e),dx=px-P.lx,dy=py-P.ly;P.lx=px;P.ly=py;P.cx=px;P.cy=py;
+    if(P.mode==='wait'&&Math.hypot(px-P.x0,py-P.y0)>8){P.mode=P.o?'drag':'scroll';if(P.o)P.o.g.scale.setScalar(1.05)}
+    if(P.mode==='drag'){const g=P.o.g;g.position.set(px-L.W/2+P.ox,L.H/2-py+P.oy,50);g.rotation.y=clamp(g.rotation.y+dx*.012,-.45,.45);g.rotation.x=clamp(g.rotation.x+dy*.012,-.45,.45);hl(laneAt(g.position.x+L.W/2))}
+    else if(P.mode==='scroll'){scrollY=clamp(P.sy-(py-P.y0),0,maxS());retarget(true)}});
+  function end(e){if(!P)return;const p=P;P=null;hl(-1);
+    if(p.mode==='drag'){const g=p.o.g;g.scale.setScalar(1);p.o.hold=true;setTimeout(()=>{p.o.hold=false},400);
+      const ci=laneAt(g.position.x+L.W/2),py=L.H/2-g.position.y,list=visible(TK_COL[ci].id).filter(x=>x.id!==p.o.t.id),py0=L.top+4+L.hh+8+L.ch/2-scrollY;
+      moveTask(p.o.t.id,TK_COL[ci].id,clamp(Math.round((py-py0)/(L.ch+L.gapY)),0,list.length))}
+    else if(p.mode==='wait'&&p.o&&e.type==='pointerup')st.current.open(p.o.t)}
+  cvs.addEventListener('pointerup',end);cvs.addEventListener('pointercancel',end);
+  cvs.addEventListener('wheel',e=>{e.preventDefault();scrollY=clamp(scrollY+e.deltaY,0,maxS());retarget(true)},{passive:false});
+  function frame(){raf=requestAnimationFrame(frame);
+    if(P&&P.mode==='drag'){const y=P.cy,d=y>L.H-100?10:y<L.top+L.hh+60?-10:0;if(d){const n=clamp(scrollY+d,0,maxS());if(n!==scrollY){scrollY=n;retarget(false)}}}
+    cards.forEach(o=>{const g=o.g;g.rotation.x*=.85;g.rotation.y*=.85;g.rotation.z*=.85;if(o.hold||(P&&P.mode==='drag'&&P.o===o))return;g.position.x+=(o.tx-g.position.x)*.25;g.position.y+=(o.ty-g.position.y)*.25;g.position.z*=.75});
+    R.render(S,cam)}
+  const ro=new ResizeObserver(()=>build());ro.observe(root);build();frame();
+  return{sync,retex:()=>{ver++;sync()},destroy:()=>{cancelAnimationFrame(raf);ro.disconnect();cards.forEach(kill);R.dispose();R.forceContextLoss()}}
+}
+
+function TaskTab({ tasks, setTasks, members }) {
+  const rootRef=useRef(null),cvRef=useRef(null),api=useRef(null);
+  const [fil,setFil]=useState('all');
+  const [sh,setSh]=useState(null);
+  const st=useRef({});
+  const openSheet=t=>setSh({id:t?t.id:null,t:t?t.t:'',m:t?t.m:(st.current.fil!=='all'?st.current.fil:(members[0]?.id??'')),p:t?t.p:1,c:t?t.c:'todo',arm:false});
+  st.current={tasks,members,fil,setTasks,open:openSheet};
+  useEffect(()=>{const a=createBoard(cvRef.current,rootRef.current,st);api.current=a;
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>api.current&&api.current.retex());
+    return()=>{a.destroy();api.current=null}},[]);
+  useEffect(()=>{api.current&&api.current.sync()},[tasks,members,fil]);
+  const upd=k=>v=>setSh(p=>({...p,[k]:v,arm:false}));
+  const save=()=>{const title=clean(sh.t,60);if(!title)return;
+    if(sh.id){setTasks(p=>{const old=p.find(x=>x.id===sh.id);if(!old)return p;const nt={...old,t:title,m:sh.m,p:sh.p,c:sh.c};return old.c!==sh.c?[...p.filter(x=>x.id!==sh.id),nt]:p.map(x=>x.id===sh.id?nt:x)})}
+    else if(tasks.length<LIM.items)setTasks(p=>[...p,{id:uid(),t:title,m:sh.m,p:sh.p,c:'todo',ts:Date.now()}]);
+    setSh(null)};
+  const del=()=>{if(!sh.arm){setSh(p=>({...p,arm:true}));return}setTasks(p=>p.filter(x=>x.id!==sh.id));setSh(null)};
+  const sc=(on,c)=>({borderColor:on?c:'#E5E5E5',background:on?c+'1A':'#fff',color:on?c:'#666'});
+  return h('div',{ref:rootRef,style:{position:'absolute',inset:0,overflow:'hidden',background:'#F4F1EE'}},
+    h('canvas',{ref:cvRef,style:{position:'absolute',inset:0,width:'100%',height:'100%',display:'block',touchAction:'none'}}),
+    h('div',{className:'tk-chips'},
+      [{id:'all',name:'すべて',emoji:'🗂',color:'#333'},...members].map(m=>h('button',{key:m.id,className:'chip',style:sc(fil===m.id,m.color),onClick:()=>setFil(m.id)},(m.emoji?m.emoji+' ':'')+m.name))),
+    tasks.length===0&&h('div',{className:'tk-empty'},'タスクはまだありません\n右下の「＋ タスク追加」から始めましょう'),
+    h('button',{className:'tk-fab',onClick:()=>openSheet(null)},'＋ タスク追加'),
+    sh&&h('div',{className:'tk-back',onClick:()=>setSh(null)},
+      h('div',{className:'tk-sheet',onClick:e=>e.stopPropagation()},
+        h('div',{style:{fontSize:17,fontWeight:800,marginBottom:12}},sh.id?'タスクを編集':'タスクを追加'),
+        h('input',{className:'field',style:{margin:0,fontSize:16},autoFocus:!sh.id,placeholder:'例：夕食の買い物',maxLength:60,value:sh.t,onChange:e=>upd('t')(e.target.value),onKeyDown:e=>e.key==='Enter'&&save()}),
+        h('div',{className:'tk-lb'},'👤 担当'),
+        h('div',{className:'tk-row'},members.map(m=>h('button',{key:m.id,className:'m-chip',style:sc(sh.m===m.id,m.color),onClick:()=>upd('m')(m.id)},m.emoji+' '+m.name))),
+        h('div',{className:'tk-lb'},'優先度'),
+        h('div',{className:'tk-row'},TK_PRI.map((n,i)=>h('button',{key:n,className:'m-chip',style:sc(sh.p===i,'#FF5E8A'),onClick:()=>upd('p')(i)},n))),
+        sh.id&&h(Fragment,null,h('div',{className:'tk-lb'},'状態'),
+          h('div',{className:'tk-row'},TK_COL.map(c=>h('button',{key:c.id,className:'m-chip',style:sc(sh.c===c.id,c.c),onClick:()=>upd('c')(c.id)},c.n)))),
+        h('div',{className:'tk-act'},
+          sh.id&&h('button',{className:'tk-del',onClick:del},sh.arm?'もう一度タップで削除':'削除'),
+          h('button',{className:'btn btn-grad',style:{flex:2},onClick:save},'保存'))))
+  );
+}
+
+// ═══════════════════════ SETTINGS ════════════════════════════════════════════
+function CfgTab({ members, setMembers, onReset }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmoji,setNewEmoji]= useState(EMOJIS[0]);
+  const [newClr,  setNewClr]  = useState(PAL[0]);
+  const addM = () => {
+    const name=clean(newName,20);
+    if(!name||members.length>=LIM.members)return;
+    setMembers(p=>[...p,{id:uid(),name,emoji:newEmoji,color:cleanClr(newClr)}]);
+    setNewName('');setShowAdd(false);
+  };
+  const delM = id => { if(members.length<=1)return; setMembers(p=>p.filter(m=>m.id!==id)); };
+
+  return h(Fragment, null,
+    h('div',{className:'box box-green'},
+      h('strong',null,'🟢 リアルタイム同期中'),
+      'Firebaseで全員のデータが自動同期されます。同じURLを開くだけで家族全員が最新データを見られます。'
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'家族メンバー'),
+      members.map(m=>h('div',{key:m.id,className:'m-row'},
+        h('span',{style:{fontSize:24}},m.emoji),
+        h('div',{style:{flex:1}},h('div',{style:{fontSize:15,fontWeight:700}},m.name)),
+        h('div',{style:{width:13,height:13,borderRadius:'50%',background:m.color}}),
+        h('button',{className:'del',disabled:members.length<=1,style:{opacity:members.length<=1?.22:1},onClick:()=>delM(m.id)},'✕'),
+      )),
+      members.length<LIM.members&&h(Fragment,null,
+        h('button',{className:'btn btn-ghost'+(showAdd?' warn':''),style:{marginTop:12,width:'100%'},onClick:()=>setShowAdd(p=>!p)},showAdd?'✕ 閉じる':'＋ メンバーを追加'),
+        showAdd&&h('div',{className:'fi',style:{marginTop:12}},
+          h('input',{className:'field',placeholder:'名前（例: じいじ、ばあば）',maxLength:20,value:newName,onChange:e=>setNewName(e.target.value)}),
+          h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'絵文字'),
+          h('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}},EMOJIS.map(e=>h('button',{key:e,style:{fontSize:24,padding:'4px 6px',borderRadius:10,border:'2px solid',borderColor:newEmoji===e?'#FF5E8A':'#E5E5E5',background:newEmoji===e?'#FFF0F5':'#fff'},onClick:()=>setNewEmoji(e)},e))),
+          h('div',{style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:6}},'カラー'),
+          h('div',{className:'palette'},PAL.slice(0,12).map(c=>h('button',{key:c,className:'pal-dot'+(newClr===c?' on':''),style:{background:c},onClick:()=>setNewClr(c)}))),
+          h('button',{className:'btn btn-grad',style:{background:newName.trim()?undefined:'#DDD',boxShadow:'none',color:newName.trim()?'#fff':'#AAA'},disabled:!newName.trim(),onClick:addM},'メンバーを追加'),
+        ),
+      ),
+    ),
+    h('div',{className:'card'},
+      h('div',{className:'card-label'},'Firebase設定'),
+      h('p',{style:{fontSize:13,color:'#888',marginBottom:12,lineHeight:1.7}},'Firebase設定をリセットして再設定画面に戻ります。データはFirebase上に残ります。'),
+      h('button',{className:'btn btn-ghost warn',style:{width:'100%'},onClick:()=>{if(!confirm('Firebase設定をリセットしますか？'))return;onReset()}},'🔧 Firebase設定をやり直す'),
+    ),
+  );
+}
+
+createRoot(document.getElementById('root')).render(h(App, null));
+</script>
+</body>
+</html>
