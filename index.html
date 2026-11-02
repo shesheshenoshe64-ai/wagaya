@@ -287,6 +287,7 @@ const vC = c => c&&typeof c.id==='string'&&typeof c.name==='string';
 const safeArr = (v, validator) => Array.isArray(v) ? v.filter(validator) : [];
 const vN = n => n && typeof n.id==='string' && typeof n.text==='string' && n.text.length>0;
 const vT = t => t && typeof t.id==='string' && typeof t.t==='string' && typeof t.c==='string';
+const vCM = e => e && typeof e.id==='string' && typeof e.n==='string' && e.n.length>0 && typeof e.c==='string';
 
 // ── Config persistence ────────────────────────────────────────────────────────
 const loadCfg = () => { try { const v=localStorage.getItem(LS_CFG); return v?JSON.parse(v):null } catch { return null } };
@@ -527,6 +528,7 @@ function MainApp({ db, onReset }) {
   const [shopCats, setShopCats] = useState(DEF_CATS);
   const [notes,    setNotes]    = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [cornerMap, setCornerMap] = useState([]);
 
   // ── お知らせポップアップ ──────────────────────────────────────────────────
   const [popup,       setPopup]       = useState(null);  // { items: [{icon,text}] }
@@ -625,6 +627,7 @@ function MainApp({ db, onReset }) {
     listen('shopCats', setShopCats, vC, DEF_CATS);
     listen('notes',    setNotes,    vN, []);
     listen('tasks', setTasks, vT, []);
+    listen('cornerMap', setCornerMap, vCM, []);
     return () => unsubs.forEach(u => u());
   }, [db]);
 
@@ -646,6 +649,7 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
   useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
   useEffect(() => { if (synced) writeDb('tasks', tasks); }, [tasks]);
+  useEffect(() => { if (synced) writeDb('cornerMap', cornerMap); }, [cornerMap]);
   // 旧・掲示板の未読メッセージを、一度だけ To Do に引き継ぐ
   useEffect(() => {
     if (!loaded.current.tasks || !loaded.current.notes) return;
@@ -713,7 +717,7 @@ function MainApp({ db, onReset }) {
       style: tab==='board' ? { padding:0, overflow:'hidden', position:'relative' } : {}
     },
       tab==='menu'   && h(MenuTab,   { shopping, setShopping, shopCats, members }),
-      tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members }),
+      tab==='shop'   && h(ShopTab,   { shopping, setShopping, shopCats, setShopCats, members, cornerMap, setCornerMap }),
       tab==='cal'    && h(CalTab,    { events, setEvents, members }),
       tab==='budget' && h(BudgetTab, { budget, setBudget, members }),
       tab==='board'  && h(TaskTab,  { tasks, setTasks, members }),
@@ -1068,7 +1072,60 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
 }
 
 // ═══════════════════════ SHOPPING ════════════════════════════════════════════
-function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
+// ── スーパーのコーナー仕分け ──────────────────────────────────────────────
+// 並び順＝店内を歩く順。cornerOf は 学習メモ→レシピ材料辞書→キーワード の順で判定
+const CORNERS = [
+  { k:'veg',    label:'🥬 野菜・果物' },
+  { k:'fish',   label:'🐟 鮮魚' },
+  { k:'dry',    label:'🧂 乾物・調味料' },
+  { k:'meat',   label:'🥩 精肉' },
+  { k:'dairy',  label:'🥛 卵・乳製品' },
+  { k:'daily',  label:'🍢 豆腐・日配' },
+  { k:'bread',  label:'🍞 パン' },
+  { k:'frozen', label:'🧊 冷凍食品' },
+  { k:'drink',  label:'🍹 飲料' },
+  { k:'house',  label:'🧻 日用品' },
+  { k:'other',  label:'📦 その他' },
+];
+// レシピ材料178種の確定辞書（買い物リストに来る材料は推測でなく確定で仕分ける）
+const CORNER_OF_NAME = {
+  'えのき':'veg','かぼちゃ':'veg','きゅうり':'veg','ごぼう':'veg','さつまいも':'veg','しいたけ':'veg','しめじ':'veg','しょうが':'veg','じゃがいも':'veg','ぜんまい':'veg','たけのこ':'veg','なす':'veg','にんじん':'veg','にんにく':'veg','ほうれん草':'veg','もやし':'veg','れんこん':'veg','アボカド':'veg','キャベツ':'veg','サンチュ':'veg','セロリ':'veg','チンゲン菜':'veg','トマト':'veg','ニラ':'veg','バジル':'veg','パクチー':'veg','ピーマン':'veg','ブロッコリー':'veg','プチトマト':'veg','マッシュルーム':'veg','レタス':'veg','レモン':'veg','大根':'veg','大葉':'veg','春菊':'veg','玉ねぎ':'veg','白菜':'veg','赤パプリカ':'veg','里芋':'veg','長ねぎ':'veg','長芋':'veg','絹さや':'veg',
+  'あさり':'fish','あじ':'fish','いか':'fish','いくら':'fish','いわし':'fish','うなぎ蒲焼き':'fish','えび':'fish','かき':'fish','かれい':'fish','さば':'fish','さんま':'fish','しらす':'fish','たら':'fish','ぶり':'fish','まぐろ':'fish','サーモン刺身':'fish','ホッケ開き':'fish','明太子':'fish','刺身盛り合わせ':'fish','塩サバ':'fish','白身魚':'fish','金目鯛':'fish','銀だら':'fish','鮭':'fish',
+  'ウインナー':'meat','チャーシュー':'meat','ハム':'meat','ベーコン':'meat','ラム肉':'meat','合いびき肉':'meat','手羽元':'meat','手羽先':'meat','牛すじ':'meat','牛ひき肉':'meat','牛もつ':'meat','牛もも塊肉':'meat','牛ステーキ肉':'meat','牛肉':'meat','牛薄切り肉':'meat','豚しゃぶ肉':'meat','豚ひき肉':'meat','豚もつ':'meat','豚カツ':'meat','豚バラ塊':'meat','豚バラ塊肉':'meat','豚バラ肉':'meat','豚ホルモン':'meat','豚レバー':'meat','豚ロース':'meat','豚肩ロース':'meat','豚肩ロース塊':'meat','鶏ささみ':'meat','鶏ひき肉':'meat','鶏むね肉':'meat','鶏もも肉':'meat',
+  'うずら卵':'dairy','チーズ':'dairy','バター':'dairy','牛乳':'dairy','生クリーム':'dairy','粉チーズ':'dairy','モッツァレラチーズ':'dairy','卵':'dairy','豆乳':'dairy',
+  'かまぼこ':'daily','こんにゃく':'daily','さつま揚げ':'daily','しらたき':'daily','ちくわ':'daily','キムチ':'daily','シュウマイの皮':'daily','春巻きの皮':'daily','餃子の皮':'daily','厚揚げ':'daily','木綿豆腐':'daily','油揚げ':'daily','豆腐':'daily','糸こんにゃく':'daily','メンマ':'daily','冷麺':'daily','中華麺':'daily','うどん':'daily','そば':'daily','ちゃんぽん麺':'daily','つけ麺用太麺':'daily','ほうとう麺':'daily','太うどん':'daily','焼きそば麺':'daily','生ラーメン麺':'daily','トッポギ':'daily','ピザ生地':'daily','梅干し':'daily','紅しょうが':'daily',
+  'バゲット':'bread',
+  'お好み焼き粉':'dry','かつお節':'dry','かに缶':'dry','きくらげ':'dry','わかめ':'dry','干ししいたけ':'dry','唐辛子':'dry','カレールー':'dry','グリーンカレーペースト':'dry','ココナッツミルク':'dry','コチュジャン':'dry','シチュールー':'dry','チヂミ粉':'dry','トマトソース':'dry','トマト缶':'dry','トムヤムペースト':'dry','ドミグラスソース缶':'dry','ハヤシルー':'dry','パイナップル缶':'dry','マヨネーズ':'dry','コーン':'dry','白ごま':'dry','練りごま':'dry','ピーナッツ':'dry','カシューナッツ':'dry','レーズン':'dry','なつめ':'dry','アンチョビ':'dry','米':'dry','もち米':'dry','ご飯':'dry','そうめん':'dry','春雨':'dry','マカロニ':'dry','スパゲッティ':'dry','ラザニア生地':'dry','ライスヌードル':'dry','皿うどん麺':'dry','高野豆腐':'dry','豆板醤':'dry',
+  'グリンピース':'frozen','ミックスベジタブル':'frozen',
+};
+// 手入力品のためのキーワード（上から順に判定。先勝ちが大事）
+const CORNER_KEYS = [
+  ['frozen', ['冷凍']],
+  ['house',  ['洗剤','ティッシュ','トイレットペーパー','キッチンペーパー','ラップ','アルミホイル','ゴミ袋','ごみ袋','シャンプー','リンス','ボディソープ','歯磨き','ハンドソープ','スポンジ','電池','除菌','ウェット','おむつ','オムツ','マスク','漂白','柔軟剤','クイックル','フローリング','掃除','石鹸','せっけん']],
+  ['drink',  ['ビール','ワイン','日本酒','焼酎','ウイスキー','ジュース','お茶','麦茶','緑茶','コーヒー','紅茶','炭酸','サイダー','コーラ','チューハイ','スポーツドリンク','カルピス','甘酒','エナジー','ミネラルウォーター','天然水']],
+  ['dry',    ['缶','スープの素','コンソメ','鶏がら','ルー']],
+  ['fish',   ['魚','鮭','さば','サバ','あじ','アジ','いわし','イワシ','さんま','サンマ','たら','タラ','ぶり','ブリ','まぐろ','マグロ','かつお','カツオ','えび','エビ','いか','イカ','たこ','タコ','あさり','しじみ','かき','カキ','ほたて','ホタテ','かに','カニ','しらす','刺身','切り身','切身','ホッケ','明太子','たらこ','いくら','うなぎ','サーモン','さわら','サワラ','きんめ','キンメ','めばる','メバル','あなご','アナゴ']],
+  ['meat',   ['肉','豚','牛','鶏','ひき','ハム','ウインナー','ソーセージ','ベーコン','ラム','ホルモン','レバー','手羽','ささみ','砂肝','チャーシュー','ミンチ','ステーキ','しゃぶしゃぶ用']],
+  ['dairy',  ['牛乳','ミルク','卵','たまご','玉子','チーズ','ヨーグルト','バター','クリーム','豆乳','マーガリン']],
+  ['daily',  ['豆腐','納豆','油揚げ','厚揚げ','こんにゃく','しらたき','かまぼこ','ちくわ','さつま揚げ','はんぺん','キムチ','漬物','メンマ','めんま','餃子の皮','春巻きの皮','ワンタンの皮','餃子','シュウマイ','中華麺','焼きそば麺','ラーメン麺','うどん玉','餅','トッポギ','梅干し','紅しょうが','らっきょう','福神漬','プリン','ゼリー']],
+  ['veg',    ['野菜','キャベツ','白菜','レタス','玉ねぎ','ねぎ','長ねぎ','にんじん','じゃがいも','大根','きゅうり','トマト','なす','ピーマン','パプリカ','ほうれん草','小松菜','春菊','ニラ','もやし','ごぼう','れんこん','里芋','さつまいも','かぼちゃ','ブロッコリー','カリフラワー','セロリ','アスパラ','オクラ','いんげん','枝豆','とうもろこし','しいたけ','しめじ','えのき','まいたけ','エリンギ','なめこ','きのこ','しょうが','生姜','にんにく','大葉','しそ','バジル','パクチー','みょうが','レモン','りんご','バナナ','みかん','ぶどう','いちご','もも','なし','梨','すいか','メロン','キウイ','アボカド','果物','フルーツ','長芋','山芋','チンゲン菜','水菜','豆苗','かいわれ','三つ葉','パセリ','サンチュ','唐辛子','とうがらし']],
+  ['dry',    ['醤油','しょうゆ','味噌','みそ','塩','砂糖','酢','料理酒','みりん','油','ソース','ケチャップ','マヨネーズ','ドレッシング','だし','つゆ','めんつゆ','ポン酢','小麦粉','片栗粉','パン粉','米','パスタ','スパゲッティ','マカロニ','そうめん','そば','春雨','海苔','のり','わかめ','ひじき','切り干し','ごま','ナッツ','カレー','シチュー','鍋つゆ','鍋の素','焼肉のたれ','たれ','タレ','スパイス','こしょう','胡椒','七味','わさび','からし','ラー油','豆板醤','オイスター','ナンプラー','ジャム','はちみつ','蜂蜜','シリアル','グラノーラ','ふりかけ','インスタント','カップ麺','カップラーメン','高野豆腐','粉']],
+  ['bread',  ['パン','食パン','バゲット','クロワッサン','サンドイッチ']],
+];
+// 買い物アイテムの品名部分（「鶏もも肉 400g」の「鶏もも肉」）を取り出す
+const baseOf = text => (text || '').split(' ')[0];
+function cornerOf(text, learned) {
+  const base = baseOf(text);
+  const hit = (learned || []).find(e => e.n === base) || (learned || []).find(e => e.n === text);
+  if (hit) return hit.c;
+  if (CORNER_OF_NAME[base]) return CORNER_OF_NAME[base];
+  for (const [k, kws] of CORNER_KEYS) {
+    if (kws.some(w => (text || '').includes(w))) return k;
+  }
+  return 'other';
+}
+
+function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, cornerMap, setCornerMap }) {
   const [text,    setText]    = useState('');
   const [memId,   setMemId]   = useState(members[0]?.id ?? '');
   const [catId,   setCatId]   = useState(shopCats[0]?.id ?? '');
@@ -1107,6 +1164,29 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
     setShopping(p => p.map(i => i.catId===id ? {...i,catId:fb} : i));
     if (filter===id) setFilter('all');
     if (catId===id)  setCatId(fb);
+  };
+
+  // ── コーナー仕分け（スーパーカテゴリのみ） ────────────────────────────────
+  const superCat = shopCats.find(c => c.name === 'スーパー');
+  const cornerOfItem = item => cornerOf(item.text, cornerMap || []);
+  const setCorner = (item, key) => {
+    const base = baseOf(item.text);
+    setCornerMap(p => {
+      const ex = p.find(e => e.n === base);
+      if (ex) return p.map(e => e.n === base ? { ...e, c:key } : e);
+      return [...p, { id:uid(), n:base, c:key }];
+    });
+  };
+  const renderPending = (items, useCorners) => {
+    if (!useCorners) return items.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit }));
+    return CORNERS.map(cn => ({ cn, items: items.filter(i => cornerOfItem(i) === cn.k) }))
+      .filter(g => g.items.length > 0)
+      .map(g => h('div', { key:g.cn.k },
+        h('div', { style:{fontSize:11,fontWeight:800,color:'#999',letterSpacing:'.5px',padding:'8px 2px 2px'} },
+          g.cn.label + '　' + g.items.length + '件'),
+        g.items.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit,
+          corner:cornerOfItem(item), onSetCorner:key => setCorner(item, key) })),
+      ));
   };
 
   const pending  = shopping.filter(i => !i.done);
@@ -1196,7 +1276,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
                 g.pending.length>0 && h('div', { className:'cat-cnt', style:{background:g.cat.color+'1A',color:g.cat.color} }, g.pending.length+'件'),
               ),
               h('div', { className:'cat-items' },
-                g.pending.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
+                renderPending(g.pending, !!(superCat && g.cat.id===superCat.id)),
                 g.done.length>0 && h('div', { style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4} },
                   g.done.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
                 ),
@@ -1206,7 +1286,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
           (filtered??[]).length===0
             ? h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'📭'),'このカテゴリに商品はありません')
             : h(Fragment,null,
-                (filtered??[]).filter(i=>!i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit})),
+                renderPending((filtered??[]).filter(i=>!i.done), !!(superCat && filter===superCat.id)),
                 (filtered??[]).filter(i=>i.done).length>0&&h('div',{style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4}},
                   (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit}))
                 ),
@@ -1216,7 +1296,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members }) {
       `✅ 完了済みを削除 (${done.length}件)`),
   );
 }
-function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
+function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit, corner, onSetCorner }) {
   const m = members.find(x => x.id===item.memberId) ?? members[0];
   const cat = shopCats.find(c => c.id===item.catId) ?? shopCats[0];
   const [editing,    setEditing]    = useState(false);
@@ -1256,6 +1336,21 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
         }
       }, c.name))
     ),
+    // コーナー選択（スーパーカテゴリの品だけ。選ぶと学習メモに保存される）
+    onSetCorner && h(Fragment, null,
+      h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '🧺 コーナー（売り場）'),
+      h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
+        CORNERS.map(cn => h('button', { key:cn.k, onClick:()=>onSetCorner(cn.k),
+          style:{
+            padding:'5px 11px',borderRadius:20,border:'2px solid',fontSize:12,fontWeight:700,
+            borderColor: corner===cn.k ? '#FF5E8A' : '#E5E5E5',
+            background:  corner===cn.k ? '#FF5E8A22' : '#fff',
+            color:       corner===cn.k ? '#FF5E8A' : '#AAA',
+            transition:'all .12s',
+          }
+        }, cn.label))
+      ),
+    ),
     // 担当者選択
     h('div', { style:{fontSize:10,fontWeight:800,color:'#AAA',letterSpacing:'.8px',marginBottom:4} }, '👤 担当'),
     h('div', { style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:6} },
@@ -1288,6 +1383,8 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
       style:{ cursor: item.done ? 'default' : 'pointer', flex:1 },
       title: item.done ? '' : 'タップして編集',
     }, item.text),
+    corner && !item.done && h('span', { style:{fontSize:10,fontWeight:700,color:'#AAA',flexShrink:0,whiteSpace:'nowrap'} },
+      (CORNERS.find(c => c.k===corner)?.label ?? '')),
     cat && !item.done && h('button', { onClick:startEdit,
       style:{
         fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:10,
@@ -1299,6 +1396,7 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit }) {
     h('button', { className:'del', onClick:()=>onDel(item.id) }, '✕'),
   );
 }
+
 // ═══════════════════════ CALENDAR ════════════════════════════════════════════
 function CalTab({ events, setEvents, members }) {
   const [cur,     setCur]     = useState(new Date());
