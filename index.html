@@ -1383,8 +1383,6 @@ function ShopItem({ item, members, shopCats, onToggle, onDel, onEdit, corner, on
       style:{ cursor: item.done ? 'default' : 'pointer', flex:1 },
       title: item.done ? '' : 'タップして編集',
     }, item.text),
-    corner && !item.done && h('span', { style:{fontSize:10,fontWeight:700,color:'#AAA',flexShrink:0,whiteSpace:'nowrap'} },
-      (CORNERS.find(c => c.k===corner)?.label ?? '')),
     cat && !item.done && h('button', { onClick:startEdit,
       style:{
         fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:10,
