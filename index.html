@@ -1130,6 +1130,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
   const [memId,   setMemId]   = useState(members[0]?.id ?? '');
   const [catId,   setCatId]   = useState(shopCats[0]?.id ?? '');
   const [filter,  setFilter]  = useState('all');
+  const [viewMode, setViewMode] = useState('list'); // 'list'=一覧 | 'sort'=コーナー仕分け
   const [showMgr, setShowMgr] = useState(false);
   const [newCatNm,setNewCatNm]= useState('');
   const [newCatCl,setNewCatCl]= useState(PAL[0]);
@@ -1265,6 +1266,17 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
           onClick:()=>setFilter(cat.id) }, cat.name+(cnt>0?` (${cnt})`:''));
       })
     ),
+    // View mode（一覧／仕分け）スーパーカテゴリがある時だけ
+    superCat && h('div', { style:{display:'flex',gap:8,marginBottom:10} },
+      h('button', { onClick:()=>setViewMode('list'),
+        style:{flex:1,padding:'9px',borderRadius:12,fontSize:13,fontWeight:800,transition:'all .12s',
+          background:viewMode==='list'?'#FF5E8A':'#fff',color:viewMode==='list'?'#fff':'#999',
+          border:'2px solid '+(viewMode==='list'?'#FF5E8A':'#E5E5E5')} }, '📋 一覧'),
+      h('button', { onClick:()=>setViewMode('sort'),
+        style:{flex:1,padding:'9px',borderRadius:12,fontSize:13,fontWeight:800,transition:'all .12s',
+          background:viewMode==='sort'?'#FF5E8A':'#fff',color:viewMode==='sort'?'#fff':'#999',
+          border:'2px solid '+(viewMode==='sort'?'#FF5E8A':'#E5E5E5')} }, '🧺 仕分け'),
+    ),
     // Items
     filter==='all'
       ? groups.length===0
@@ -1276,7 +1288,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
                 g.pending.length>0 && h('div', { className:'cat-cnt', style:{background:g.cat.color+'1A',color:g.cat.color} }, g.pending.length+'件'),
               ),
               h('div', { className:'cat-items' },
-                renderPending(g.pending, !!(superCat && g.cat.id===superCat.id)),
+                renderPending(g.pending, viewMode==='sort' && !!(superCat && g.cat.id===superCat.id)),
                 g.done.length>0 && h('div', { style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4} },
                   g.done.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit })),
                 ),
@@ -1286,7 +1298,7 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
           (filtered??[]).length===0
             ? h('div',{className:'empty',style:{padding:'16px 0'}},h('span',{className:'empty-ico'},'📭'),'このカテゴリに商品はありません')
             : h(Fragment,null,
-                renderPending((filtered??[]).filter(i=>!i.done), !!(superCat && filter===superCat.id)),
+                renderPending((filtered??[]).filter(i=>!i.done), viewMode==='sort' && !!(superCat && filter===superCat.id)),
                 (filtered??[]).filter(i=>i.done).length>0&&h('div',{style:{opacity:.38,borderTop:'1px dashed #EEE',paddingTop:2,marginTop:4}},
                   (filtered??[]).filter(i=>i.done).map(item=>h(ShopItem,{key:item.id,item,members,shopCats,onToggle:toggle,onDel:del,onEdit:edit}))
                 ),
