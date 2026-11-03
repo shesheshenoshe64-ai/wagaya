@@ -1178,15 +1178,59 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
       return [...p, { id:uid(), n:base, c:key }];
     });
   };
+  // ── 同じ食材の合算（仕分け表示のみ） ────────────────────────────────────
+  // 「キャベツ 0.5玉」と「キャベツ 0.2玉」を「キャベツ 0.7玉」の1行にまとめる。
+  // 品名・単位・担当がすべて同じで、数量が数字のものだけ合算する（単位違いや数量なしは別々のまま）
+  const parseAmt = text => {
+    const parts = (text || '').trim().split(/[\s　]+/);
+    if (parts.length < 2) return null;
+    const m = parts.slice(1).join(' ').match(/^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/);
+    if (!m) return null;
+    return { name: parts[0], amt: parseFloat(m[1]), unit: (m[2] || '').trim() };
+  };
+  const fmtSum = v => { const r = Math.round(v * 100) / 100; return String(r); };
+  // 戻り値: [{ item: 表示用アイテム, ids: [元のid...], merged: bool }]
+  const aggregate = items => {
+    const out = []; const byKey = {};
+    items.forEach(it => {
+      const p = parseAmt(it.text);
+      if (!p) { out.push({ item: it, ids: [it.id], merged: false }); return; }
+      const key = p.name + '|' + p.unit + '|' + it.memberId;
+      if (byKey[key]) { byKey[key].sum += p.amt; byKey[key].ids.push(it.id); byKey[key].merged = true; }
+      else { const e = { item: it, ids: [it.id], merged: false, sum: p.amt, parsed: p }; byKey[key] = e; out.push(e); }
+    });
+    return out.map(e => e.merged
+      ? { item: { ...e.item, text: e.parsed.name + ' ' + fmtSum(e.sum) + e.parsed.unit }, ids: e.ids, merged: true }
+      : { item: e.item, ids: e.ids, merged: false });
+  };
+  const toggleMany = ids => setShopping(p => p.map(i => ids.includes(i.id) ? { ...i, done: !i.done } : i));
+  const delMany    = ids => setShopping(p => p.filter(i => !ids.includes(i.id)));
+  const editMerged = (entry, changes) => setShopping(p => {
+    if (!p.some(i => i.id === entry.ids[0])) return p;
+    let rest = p.map(i => entry.ids.includes(i.id)
+      ? { ...i, catId: changes.catId ?? i.catId, memberId: changes.memberId ?? i.memberId } : i);
+    // 合算行のテキストを編集したら、1件に統合して置き換える
+    if (changes.text && changes.text !== entry.item.text) {
+      rest = rest.filter(i => !entry.ids.includes(i.id) || i.id === entry.ids[0]);
+      rest = rest.map(i => i.id === entry.ids[0] ? { ...i, text: changes.text } : i);
+    }
+    return rest;
+  });
+
   const renderPending = (items, useCorners) => {
     if (!useCorners) return items.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit }));
-    return CORNERS.map(cn => ({ cn, items: items.filter(i => cornerOfItem(i) === cn.k) }))
-      .filter(g => g.items.length > 0)
+    const renderRow = e => e.merged
+      ? h(ShopItem, { key:e.ids.join('+'), item:e.item, members, shopCats,
+          onToggle:() => toggleMany(e.ids), onDel:() => delMany(e.ids), onEdit:(id, changes) => editMerged(e, changes),
+          corner:cornerOfItem(e.item), onSetCorner:key => setCorner(e.item, key) })
+      : h(ShopItem, { key:e.item.id, item:e.item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit,
+          corner:cornerOfItem(e.item), onSetCorner:key => setCorner(e.item, key) });
+    return CORNERS.map(cn => ({ cn, rows: aggregate(items.filter(i => cornerOfItem(i) === cn.k)) }))
+      .filter(g => g.rows.length > 0)
       .map(g => h('div', { key:g.cn.k },
         h('div', { style:{fontSize:11,fontWeight:800,color:'#999',letterSpacing:'.5px',padding:'8px 2px 2px'} },
-          g.cn.label + '　' + g.items.length + '件'),
-        g.items.map(item => h(ShopItem, { key:item.id, item, members, shopCats, onToggle:toggle, onDel:del, onEdit:edit,
-          corner:cornerOfItem(item), onSetCorner:key => setCorner(item, key) })),
+          g.cn.label + '　' + g.rows.length + '件'),
+        g.rows.map(renderRow),
       ));
   };
 
