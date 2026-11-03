@@ -647,6 +647,8 @@ function MainApp({ db, onReset }) {
   useEffect(() => { if (synced) writeDb('events',   events);   }, [events]);
   useEffect(() => { if (synced) writeDb('budget',   budget);   }, [budget]);
   useEffect(() => { if (synced) writeDb('shopping', shopping); }, [shopping]);
+  // 同じ食材（品名・単位・カテゴリ・担当が同じ未完了品）はデータ自体を合算して1件に保つ
+  useEffect(() => { if (synced) { const mg = mergeShopItems(shopping); if (mg) setShopping(mg); } }, [shopping, synced]);
   useEffect(() => { if (synced) writeDb('shopCats', shopCats); }, [shopCats]);
   useEffect(() => { if (synced) writeDb('tasks', tasks); }, [tasks]);
   useEffect(() => { if (synced) writeDb('cornerMap', cornerMap); }, [cornerMap]);
@@ -1112,6 +1114,39 @@ const CORNER_KEYS = [
   ['dry',    ['醤油','しょうゆ','味噌','みそ','塩','砂糖','酢','料理酒','みりん','油','ソース','ケチャップ','マヨネーズ','ドレッシング','だし','つゆ','めんつゆ','ポン酢','小麦粉','片栗粉','パン粉','米','パスタ','スパゲッティ','マカロニ','そうめん','そば','春雨','海苔','のり','わかめ','ひじき','切り干し','ごま','ナッツ','カレー','シチュー','鍋つゆ','鍋の素','焼肉のたれ','たれ','タレ','スパイス','こしょう','胡椒','七味','わさび','からし','ラー油','豆板醤','オイスター','ナンプラー','ジャム','はちみつ','蜂蜜','シリアル','グラノーラ','ふりかけ','インスタント','カップ麺','カップラーメン','高野豆腐','粉']],
   ['bread',  ['パン','食パン','バゲット','クロワッサン','サンドイッチ']],
 ];
+// ── 同じ食材の合算（データ統合） ──────────────────────────────────────────
+// 「キャベツ 0.5玉」と「キャベツ 0.2玉」を、データ自体を1件「キャベツ 0.7玉」に統合する。
+// 品名＋数量＋単位に分解できなければ null（合算対象外）
+const parseShopAmt = text => {
+  const parts = (text || '').trim().split(/[\s　]+/);
+  if (parts.length < 2) return null;
+  const m = parts.slice(1).join(' ').match(/^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/);
+  if (!m) return null;
+  return { name: parts[0], amt: parseFloat(m[1]), unit: (m[2] || '').trim() };
+};
+const fmtShopSum = v => { const r = Math.round(v * 100) / 100; return String(r); };
+// 未完了で 品名・単位・カテゴリ・担当 がすべて同じ品を統合する。変更がなければ null を返す
+function mergeShopItems(list) {
+  const byKey = {}; const out = []; let changed = false;
+  for (const it of list) {
+    if (it.done) { out.push(it); continue; }
+    const p = parseShopAmt(it.text);
+    if (!p) { out.push(it); continue; }
+    const key = p.name + '|' + p.unit + '|' + it.catId + '|' + it.memberId;
+    const ex = byKey[key];
+    if (ex) {
+      ex.sum += p.amt;
+      ex.entry.text = ex.name + ' ' + fmtShopSum(ex.sum) + ex.unit;
+      changed = true;
+    } else {
+      const entry = { ...it };
+      byKey[key] = { entry, sum: p.amt, name: p.name, unit: p.unit };
+      out.push(entry);
+    }
+  }
+  return changed ? out : null;
+}
+
 // 買い物アイテムの品名部分（「鶏もも肉 400g」の「鶏もも肉」）を取り出す
 const baseOf = text => (text || '').split(' ')[0];
 function cornerOf(text, learned) {
@@ -1178,29 +1213,21 @@ function ShopTab({ shopping, setShopping, shopCats, setShopCats, members, corner
       return [...p, { id:uid(), n:base, c:key }];
     });
   };
-  // ── 同じ食材の合算（仕分け表示のみ） ────────────────────────────────────
-  // 「キャベツ 0.5玉」と「キャベツ 0.2玉」を「キャベツ 0.7玉」の1行にまとめる。
-  // 品名・単位・担当がすべて同じで、数量が数字のものだけ合算する（単位違いや数量なしは別々のまま）
-  const parseAmt = text => {
-    const parts = (text || '').trim().split(/[\s　]+/);
-    if (parts.length < 2) return null;
-    const m = parts.slice(1).join(' ').match(/^([0-9]+(?:\.[0-9]+)?)\s*(.*)$/);
-    if (!m) return null;
-    return { name: parts[0], amt: parseFloat(m[1]), unit: (m[2] || '').trim() };
-  };
-  const fmtSum = v => { const r = Math.round(v * 100) / 100; return String(r); };
+  // ── 同じ食材の合算表示（保険） ──────────────────────────────────────────
+  // 通常は MainApp 側の mergeShopItems がデータ自体を統合済み。
+  // 同期直後など統合前の重複が一時的に見えたときも、仕分け表示では1行にまとめる。
   // 戻り値: [{ item: 表示用アイテム, ids: [元のid...], merged: bool }]
   const aggregate = items => {
     const out = []; const byKey = {};
     items.forEach(it => {
-      const p = parseAmt(it.text);
+      const p = parseShopAmt(it.text);
       if (!p) { out.push({ item: it, ids: [it.id], merged: false }); return; }
       const key = p.name + '|' + p.unit + '|' + it.memberId;
       if (byKey[key]) { byKey[key].sum += p.amt; byKey[key].ids.push(it.id); byKey[key].merged = true; }
       else { const e = { item: it, ids: [it.id], merged: false, sum: p.amt, parsed: p }; byKey[key] = e; out.push(e); }
     });
     return out.map(e => e.merged
-      ? { item: { ...e.item, text: e.parsed.name + ' ' + fmtSum(e.sum) + e.parsed.unit }, ids: e.ids, merged: true }
+      ? { item: { ...e.item, text: e.parsed.name + ' ' + fmtShopSum(e.sum) + e.parsed.unit }, ids: e.ids, merged: true }
       : { item: e.item, ids: e.ids, merged: false });
   };
   const toggleMany = ids => setShopping(p => p.map(i => ids.includes(i.id) ? { ...i, done: !i.done } : i));
