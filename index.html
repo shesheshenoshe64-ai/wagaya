@@ -747,7 +747,7 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
   const [mood,      setMood]      = useState('all');
   const [cands,     setCands]     = useState(null);
   const [recipe,    setRecipe]    = useState(null);
-  const [servings,  setServings]  = useState(4);
+  const [servings,  setServings]  = useState(3);
   const [baseServ,  setBaseServ]  = useState(4);
   const [added,     setAdded]     = useState(false);
   const [decided,   setDecided]   = useState([]);
@@ -833,7 +833,7 @@ function MenuTab({ shopping, setShopping, shopCats, members }) {
   const choose = r => {
     setRecipe(r);
     setBaseServ(4);
-    setServings(4);
+    setServings(3);
     setAdded(false);
     setShowSteps(false);
   };
